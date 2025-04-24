@@ -21,7 +21,8 @@ private:
     void fetch_and_execute();
 
 public:
-    CPU(): current_state{&fetch_and_execute} {}
+    CPU(): 
+        current_state{&fetch_and_execute} {}
     void tick() {(this->*current_state)();}
 };
 }
