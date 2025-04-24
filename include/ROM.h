@@ -8,19 +8,20 @@ namespace SM83 {
 
 class ROM {
 private:
-    uint16_t _start;
-    std::vector<uint8_t> _contents;
+    uint16_t start_addr;
+    std::vector<uint8_t> contents;
 public:
-    ROM(uint16_t start_address, uint16_t size)
-        :_start{start_address}, _contents(size) {}
+    ROM(uint16_t start, uint16_t size)
+        :start_addr{start}, contents(size) {}
 
     bool contains(uint16_t addr) const {
-        return addr > _start && addr < _contents.size(); 
+        return addr > start_addr && addr < contents.size(); 
     }
 
     uint8_t& operator[] (uint16_t addr) {
-        return _contents[addr - _start];
+        return contents[addr - start_addr];
     }
+    uint16_t start() {return start_addr;}
 };
 
 }

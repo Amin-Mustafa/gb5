@@ -12,17 +12,26 @@ private:
     using StateFunction = void (CPU::*)();  //pointer to state function
     //Data registers
     uint8_t A, B, C, D, E, H, L;
-    uint16_t _pc;
-    uint16_t _sp;
-    int _cycles;
+    uint16_t pc;
+    uint16_t sp;
+    int cycles;
+    bool int_enable=false;
+
+    //memory
+    MMU& memory;
+
+    //internal function 
+    Instruction decode(uint8_t opcode);
+    void EI() {int_enable = true;}
 
     //CPU states
     StateFunction current_state;
     void fetch_and_execute();
 
 public:
-    CPU(): 
-        current_state{&fetch_and_execute} {}
+    CPU(MMU& memory): 
+        memory{memory}, current_state{&fetch_and_execute} {}
+
     void tick() {(this->*current_state)();}
 };
 }

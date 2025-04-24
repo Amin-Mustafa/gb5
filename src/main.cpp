@@ -6,4 +6,5 @@
 int main() {
     SM83::MemoryMap map;
     SM83::MMU mem(map);
+    SM83::CPU cpu(mem);
 }

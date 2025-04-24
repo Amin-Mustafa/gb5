@@ -1,21 +1,31 @@
 #include "../include/Instruction.h"
 #include <iostream>
+
 namespace SM83 {
 
 void Instruction::print() {
-    if(_opname.length() > 0) {
-        std::cout << _opname << '\t';
-        for(const auto& arg: _args){
+    if(opname.length() > 0) {
+        std::cout << opname << '\t';
+        for(const auto& arg: args){
             std::cout << (int)arg.get() << ' ';
         }
         std::cout << '\n';
     }
 }
 
-void Instruction::execute() {
-    if(_op) {
-        _op(_args);
-    }
-    else std::cerr << "Null operation\n";
+void Instruction::execute(CPU& cpu) {
+    std::visit([&](auto&& f) {
+        if (!f) {
+            std::cerr << "Null operation\n";
+            return;
+        }
+
+        using T = std::decay_t<decltype(f)>;
+        if constexpr (std::is_same_v<T, Argfn>) {
+            f(args);
+        } else if constexpr (std::is_same_v<T, CPUfn>) {
+            (cpu.*f)(); // Pass any int you want here
+        }
+    }, op);
 }
 }

@@ -1,4 +1,5 @@
 #include "../include/Instruction.h"
+#include "../include/CPU.h"
 
 namespace SM83 {
 

@@ -3,11 +3,8 @@
 
 namespace SM83{
 
-enum MEMORY_MAP{
-    ROM_START = 0x0000
-};
 
-uint8_t& MMU::_read_address(uint16_t addr) {
-    if(addr >= ROM_START) return _rom[addr];
+uint8_t& MMU::read_address(uint16_t addr) {
+    if(addr >= rom.start()) return rom[addr];
 }
 }

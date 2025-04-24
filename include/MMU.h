@@ -10,27 +10,27 @@ namespace SM83 {
 struct MemoryMap {
     //structure to initialize MMU memory map
     MemoryMap()
-        :_romspace{new ROM{0x0000, 0x8000}} {}
+        :romspace{new ROM{0x0000, 0x8000}} {}
 
     ~MemoryMap() {
-        delete _romspace;
+        delete romspace;
     }
 
-    ROM* _romspace;
+    ROM* romspace;
 };
 
 class MMU {
 public:
     MMU(MemoryMap& map)
-        :_rom{*(map._romspace)} {}
+        :rom{*(map.romspace)} {}
 
 
     uint8_t& operator[](uint16_t addr) {
-        return _read_address(addr);
+        return read_address(addr);
     }
 private:
-    ROM& _rom;
-    uint8_t& _read_address(uint16_t addr);
+    ROM& rom;
+    uint8_t& read_address(uint16_t addr);
 };
 
 }

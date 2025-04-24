@@ -1,15 +1,23 @@
 #include "../include/CPU.h"
 #include "../include/Instruction.h"
+#include "../include/MMU.h"
 #include <iostream>
 
 namespace SM83 {
 
-Instruction::Opfn decode_inst(uint8_t opcode) {
-    if((opcode >= 40 && opcode <= 0x7f) && opcode != 0x76) 
-        return load8;
-    else return nullptr;
+Instruction CPU::decode(uint8_t opcode) { 
+    switch(opcode) {
+        case 0x78:
+            return Instruction{load8, {std::ref(A), std::ref(B)}, 4, "LD A B"};
+        case 0xFB:
+            return Instruction{EI, 4, "EI"};
+        default: break;
+    }
 }
 
 void CPU::fetch_and_execute() {
+    Instruction inst = decode(memory[pc++]);
+    inst.print();
+    inst.execute(*this);
 }
 }
