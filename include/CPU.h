@@ -2,6 +2,7 @@
 #define CPU_H
 
 #include <stdint.h>
+#include <variant>
 
 namespace SM83 {
 class Instruction;
@@ -15,14 +16,12 @@ private:
     uint16_t pc;
     uint16_t sp;
     int cycles;
-    bool int_enable=false;
 
     //memory
     MMU& memory;
 
     //internal function 
     Instruction decode(uint8_t opcode);
-    void EI() {int_enable = true;}
 
     //CPU states
     StateFunction current_state;

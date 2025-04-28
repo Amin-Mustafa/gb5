@@ -18,22 +18,25 @@ public:
     typedef void(*Argfn)(Args&);    //for pure argument operations
     typedef void(CPU::*CPUfn)();    //for CPU-dependent operations
 
-    Instruction(CPUfn cpu_op, int cycles, std::string opname = "")
-        :op{cpu_op}, args{}, cycles{0}, opname{""} {}
-    Instruction(Argfn arg_op, Args args, int cycles, std::string opname = "")
-        :op{arg_op}, args{args}, cycles{cycles}, opname{opname} {}
+    Instruction(CPUfn cpu_op, int length, int cycles, std::string opname = "")
+        :op{cpu_op}, args{}, len{length}, cycles{0}, opname{""} {}
+    Instruction(Argfn arg_op, Args args, int length, int cycles, std::string opname = "")
+        :op{arg_op}, args{args}, len{length}, cycles{cycles}, opname{opname} {}
     
     void print();
     void execute(CPU&);
+    int length() {return len;}
 
 private:
     std::variant<Argfn, CPUfn> op;
     Args args;
+    int len;
     int cycles;
     std::string opname;
 };
 
 //Standard operations, defined in ../src/Operations.cpp
+void nop(Instruction::Args&);
 void load8(Instruction::Args&);
 void load16(Instruction::Args&);
 }
