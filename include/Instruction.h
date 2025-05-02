@@ -14,7 +14,8 @@ class CPU;
 
 class Instruction {
 public:
-    typedef std::vector<std::reference_wrapper<uint8_t>> Args;
+    typedef std::variant<std::reference_wrapper<uint8_t>, std::reference_wrapper<uint16_t>> Operand;
+    typedef std::vector<Operand> Args;
     typedef void(*Argfn)(Args&);    //for pure argument operations
     typedef void(CPU::*CPUfn)();    //for CPU-dependent operations
 
@@ -39,6 +40,10 @@ private:
 void nop(Instruction::Args&);
 void load8(Instruction::Args&);
 void load16(Instruction::Args&);
+void load_pair(Instruction::Args&);
+void inc8(Instruction::Args&); 
+void inc16(Instruction::Args&);
+ 
 }
 
 #endif
