@@ -3,17 +3,16 @@
 
 #include <stdint.h>
 #include <variant>
-#include <Register.h>
 
 namespace SM83 {
 class Instruction;
 class MMU;
 
 class CPU {
-public:
+private:
     using StateFunction = void (CPU::*)();  //pointer to state function
     //Data registers
-    Register AF, BC, DE, HL;
+    uint8_t A, B, C, D, E, H, L;
     uint16_t pc;
     uint16_t sp;
     int cycles;
@@ -34,7 +33,6 @@ public:
 
     void tick() {(this->*current_state)();}
 };
-
 }
 
 #endif
