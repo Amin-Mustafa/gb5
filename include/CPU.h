@@ -9,7 +9,7 @@ class Instruction;
 class MMU;
 
 class CPU {
-private:
+public:
     using StateFunction = void (CPU::*)();  //pointer to state function
     //Data registers
     uint8_t A, B, C, D, E, H, L;
@@ -22,7 +22,7 @@ private:
 
     //internal function 
     Instruction decode(uint8_t opcode);
-    void jr(Instruction::Args&);
+    void jr();
 
     //CPU states
     StateFunction current_state;
