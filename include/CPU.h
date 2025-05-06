@@ -22,6 +22,7 @@ private:
 
     //internal function 
     Instruction decode(uint8_t opcode);
+    void jr(Instruction::Args&);
 
     //CPU states
     StateFunction current_state;
