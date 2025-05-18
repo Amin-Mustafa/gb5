@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 #include <variant>
+#include "Register.h"
+#include <string>
 
 namespace SM83 {
 class Instruction;
@@ -13,6 +15,8 @@ public:
     using StateFunction = void (CPU::*)();  //pointer to state function
     //Data registers
     uint8_t A, B, C, D, E, H, L;
+    uint8_t* regs[7] = {&A, &B, &C, &D, &E, &H, &L};
+    FlagRegister F;
     uint16_t pc;
     uint16_t sp;
     int cycles;
@@ -22,7 +26,7 @@ public:
 
     //internal function 
     Instruction decode(uint8_t opcode);
-    void jr();
+    Instruction jr(uint8_t offset, bool condition, std::string name);
 
     //CPU states
     StateFunction current_state;

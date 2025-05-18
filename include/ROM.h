@@ -22,6 +22,7 @@ public:
         return contents[addr - start_addr];
     }
     uint16_t start() {return start_addr;}
+    uint16_t size() {return contents.size();}
 };
 
 }
