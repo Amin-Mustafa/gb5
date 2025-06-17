@@ -20,6 +20,9 @@ public:
     bool get_flag(Flag fl) const {
         return (reg >> (int)fl) & (uint8_t)1;
     }
+    uint8_t get_state() const {
+        return reg;
+    }
     //overload assignment to uint8_t for POP operation
     FlagRegister& operator=(uint8_t val) {
         reg = val;

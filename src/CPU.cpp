@@ -25,18 +25,18 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
 
 Instruction CPU::decode(uint8_t opcode) {
     using std::ref;
-    uint8_t& byte1 = memory[pc+1];
-    uint8_t& byte2 = memory[pc+2];
+    #define N8 memory[pc+1]
+    #define N16 pair(memory[pc+2], memory[pc+1])
     switch(opcode) {
         using namespace Operation;
         //0x00 - 0x0F
         case 0x00: return Instruction{[](){}, 1, 4};    //NOP
-        case 0x01: return LD_16(B,C, byte2,byte1);
+        case 0x01: return LD_16(B,C, N16);
         case 0x02: return LD_8_mem(memory[pair(B,C)], A);
         case 0x03: return INC_16(B,C);
         case 0x04: return INC_8(B,F);
         case 0x05: return DEC_8(B,F);
-        case 0x06: return LD_8_imm(B, byte1);
+        case 0x06: return LD_8_imm(B, N8);
         case 0x07: return Instruction {
             [this](){
                 F = flag_state(0, 0, 0, A >> 7);
@@ -45,18 +45,18 @@ Instruction CPU::decode(uint8_t opcode) {
             1, 4
         };
         case 0x08: return Instruction {
-            [this,byte2,byte1](){
-                memory[pair(byte2, byte1)] = sp & 0xff;
-                memory[pair(byte2, byte1)+1] = sp >> 8;
+            [this](){
+                memory[N16] = sp & 0xff;
+                memory[N16 + 1] = sp >> 8;
             },
             3,20
         };
-        case 0x09: return ADD_16(H,L,B,C,F);
+        case 0x09: return ADD_16(H,L, pair(B,C) ,F);
         case 0x0A: return LD_8_mem(A, memory[pair(B,C)]);
         case 0x0B: return DEC_16(B,C);
         case 0x0C: return INC_8(C, F);
         case 0x0D: return DEC_8(C, F);
-        case 0x0E: return LD_8_imm(C, byte1);
+        case 0x0E: return LD_8_imm(C, N8);
         case 0x0F: return Instruction {
             [this](){
                 F = flag_state(0, 0, 0, A & 1);
@@ -67,12 +67,12 @@ Instruction CPU::decode(uint8_t opcode) {
 
         //0x10 - 0x1F
         case 0x10: break;   //TODO
-        case 0x11: return LD_16(D,E,byte2,byte1);
+        case 0x11: return LD_16(D,E,N16);
         case 0x12: return LD_8_mem(memory[pair(D,E)], A);
         case 0x13: return INC_16(D,E);
         case 0x14: return INC_8(D, F);
         case 0x15: return DEC_8(D, F);
-        case 0x16: return LD_8_imm(D, byte1);
+        case 0x16: return LD_8_imm(D, N8);
         case 0x17: return Instruction{
             [this]() {
                 bool old_carry = F.get_flag(Flag::CARRY);
@@ -81,13 +81,13 @@ Instruction CPU::decode(uint8_t opcode) {
             }, 
             1,4
         };
-        case 0x18: return JR(byte1, true);
-        case 0x19: return ADD_16(H,L,D,E,F);
+        case 0x18: return JR(N8, true);
+        case 0x19: return ADD_16(H,L, pair(D,E) ,F);
         case 0x1A: return LD_8_mem(A, memory[pair(D,E)]);
         case 0x1B: return DEC_16(D,E);
         case 0x1C: return INC_8(E,F);
         case 0x1D: return DEC_8(E,F);
-        case 0x1E: return LD_8_imm(E,byte1);
+        case 0x1E: return LD_8_imm(E,N8);
         case 0x1F: return Instruction{
             [this](){
                 uint8_t old_carry = F.get_flag(Flag::CARRY);
@@ -98,8 +98,8 @@ Instruction CPU::decode(uint8_t opcode) {
         };
         
         //0x20 - 0x2F
-        case 0x20: return JR(byte1, !F.get_flag(Flag::ZERO));
-        case 0x21: return LD_16(H,L, byte2, byte1);
+        case 0x20: return JR(N8, !F.get_flag(Flag::ZERO));
+        case 0x21: return LD_16(H,L, N16);
         case 0x22: return Instruction {
             [this]() {
                 memory[pair(H,L)] = A;
@@ -110,10 +110,10 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x23: return INC_16(H,L);
         case 0x24: return INC_8(H,F);
         case 0x25: return DEC_8(H,F);
-        case 0x26: return LD_8_imm(H,byte1);
+        case 0x26: return LD_8_imm(H,N8);
         case 0x27: break;   //TODO: DAA
-        case 0x28: return JR(byte1, F.get_flag(Flag::ZERO));
-        case 0x29: return ADD_16(H,L, H,L, F);
+        case 0x28: return JR(N8, F.get_flag(Flag::ZERO));
+        case 0x29: return ADD_16(H,L, pair(H,L), F);
         case 0x2A: return Instruction {
             [this]() {
                 A = memory[pair(H,L)];
@@ -124,7 +124,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x2B: return DEC_16(H,L);
         case 0x2C: return INC_8(L,F);
         case 0x2D: return DEC_8(L,F);
-        case 0x2E: return LD_8_imm(L,byte1);
+        case 0x2E: return LD_8_imm(L,N8);
         case 0x2F: return Instruction {
             [this](){
                 A = ~A;
@@ -135,9 +135,9 @@ Instruction CPU::decode(uint8_t opcode) {
         };
         
         //0x30 - 0x3F
-        case 0x30: return JR(byte1, !F.get_flag(Flag::CARRY));
+        case 0x30: return JR(N8, !F.get_flag(Flag::CARRY));
         case 0x31: return Instruction{
-            [this,byte2,byte1]() {sp = pair(byte2, byte1);}, 3,12
+            [this]() {sp = N16;}, 3,12  //doesn't change any flags
         };
         case 0x32: return Instruction {
             [this]() {
@@ -158,8 +158,8 @@ Instruction CPU::decode(uint8_t opcode) {
             },
             1, 4 
         };
-        case 0x38: return JR(byte1, F.get_flag(Flag::CARRY));
-        case 0x39: return ADD_16(H,L, sp>>8,sp&0xff, F);
+        case 0x38: return JR(N8, F.get_flag(Flag::CARRY));
+        case 0x39: return ADD_16(H,L, sp, F);
         case 0x3A: return Instruction {
             [this]() {
                 A = memory[pair(H,L)];
@@ -170,7 +170,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x3B: return Instruction{[this](){sp--;}, 1,8};
         case 0x3C: return INC_8(A,F);
         case 0x3D: return DEC_8(A,F);
-        case 0x3E: return LD_8_imm(A,byte1);
+        case 0x3E: return LD_8_imm(A,N8);
         case 0x3F: return Instruction {
             [this]() { 
                 F = flag_state(F.get_flag(Flag::ZERO), 0, 0, !F.get_flag(Flag::CARRY));
@@ -321,6 +321,106 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0xBD: return CP_8_reg(A,L,F);
         case 0xBE: return CP_8_mem(A,memory[pair(H,L)],F);
         case 0xBF: return CP_8_reg(A,A,F);
+
+        //0xC0 - 0xCF
+        case 0xC0: return RET(!F.get_flag(Flag::ZERO));
+        case 0xC1: return POP(B, C);
+        case 0xC2: return JP(N16, !F.get_flag(Flag::ZERO));
+        case 0xC3: return JP(N16, true);
+        case 0xC4: return CALL(N16, !F.get_flag(Flag::ZERO));
+        case 0xC5: return PUSH(B,C);
+        case 0xC6: return ADD_8_imm(A, N8, 0, F);
+        case 0xC7: return RST(0x00);
+        case 0xC8: return RET(F.get_flag(Flag::ZERO));
+        case 0xC9: return RET(true);
+        case 0xCA: return JP(N16, F.get_flag(Flag::ZERO));
+        case 0xCB: break;   //TODO: PREFIX
+        case 0xCC: return CALL(N16, F.get_flag(Flag::ZERO));
+        case 0xCD: return CALL(N16, true);
+        case 0xCE: return ADD_8_imm(A, N8, 1, F);
+        case 0xCF: return RST(0x08);
+        
+        //0xD0 - 0xDF
+        case 0xD0: return RET(!F.get_flag(Flag::CARRY));
+        case 0xD1: return POP(D,E);
+        case 0xD2: return JP(N16, !F.get_flag(Flag::CARRY));
+        case 0xD3: break;   //NOP
+        case 0xD4: return CALL(N16, !F.get_flag(Flag::CARRY));
+        case 0xD5: return PUSH(D,E);
+        case 0xD6: return SUB_8_imm(A, N8, 0, F);
+        case 0xD7: return RST(0x10);
+        case 0xD8: return Instruction {
+            [this](){pop_from_stack(pc);}, 1, 16
+        };
+        case 0xD9: return Instruction{
+            [this](){
+                pop_from_stack(pc);
+                int_enable = true;
+                current_state = fetch_and_execute;
+            }, 1, 16
+        };
+        case 0xDA: return JP(N16, F.get_flag(Flag::CARRY));
+        case 0xDB: break;   //NOP
+        case 0xDC: return JP(N16, F.get_flag(Flag::CARRY));
+        case 0xDD: break;   //NOP
+        case 0xDE: return SUB_8_imm(A, N8, 1, F);
+        case 0xDF: return RST(0x18);
+        
+        //0xE0 - 0xEF
+        case 0xE0: return Instruction{[this](){memory[0xFF00 + N8] = A;}, 2, 12};
+        case 0xE1: return POP(H,L);
+        case 0xE2: return Instruction{[this](){memory[0xFF00 + C]  = A;}, 1, 8};
+        case 0xE3: break;   //NOP
+        case 0xE4: break;   //NOP
+        case 0xE5: return PUSH(H,L);
+        case 0xE6: return AND_8_imm(A, N8, F);
+        case 0xE7: return RST(0x20);
+        case 0xE8: return ADD_16_e8(sp, N8, F);
+        case 0xE9: return Instruction{
+            [this](){pc = pair(H,L);}, 1, 4
+        };
+        case 0xEA: return Instruction{
+            [this](){memory[N16] = A;}, 3, 16
+        };
+        case 0xEB:
+        case 0xEC:
+        case 0xED: break;   //NOP
+        case 0xEE: return XOR_8_imm(A, N8, F);
+        case 0xEF: return RST(0x28);
+
+        //0xF0 - 0xFF
+        case 0xF0: return Instruction{[this](){A = memory[0xFF00 + N8];}, 2,12};
+        case 0xF1: return Instruction{
+            [this](){
+                uint8_t flags = F.get_state();
+                pop_from_stack(A, flags);
+                F = flags;
+            },
+            1, 12
+        };
+        case 0xF2: return Instruction{[this](){A = memory[0xFF00  + C];}, 1, 8};
+        case 0xF3: return DI();
+        case 0xF4: break;   //NOP
+        case 0xF5: PUSH(A, F.get_state());
+        case 0xF6: OR_8_imm(A, N8, F);
+        case 0xF7: RST(0x30);
+        case 0xF8: return Instruction {
+            [this](){
+                uint16_t sp_val = sp;
+                ADD_16_e8(sp_val, N8, F).execute();
+                H = sp_val >> 8;
+                L = sp_val & 0xff;
+            },
+            2,12
+        };
+        case 0xF9: return Instruction{[this](){sp = pair(H,L);}, 1,8};
+        case 0xFA: return Instruction{[this](){A = memory[N16];}, 3,16};
+        case 0xFB: return EI();
+        case 0xFC:
+        case 0xFD: break;   //NOP
+        case 0xFE: return CP_8_imm(A, N8, F);
+        case 0xFF: return RST(0x38);
+
         default: return Instruction{[](){}, 1, 4};
     }
 }
@@ -396,5 +496,11 @@ Instruction CPU::RET(bool condition) {
 }
 Instruction CPU::RST(uint8_t destination) {
     return Instruction{[this, destination](){pc = destination;}, 1, 16};
+}
+Instruction CPU::DI(){
+    return Instruction{[this](){int_enable = false;}, 1,4};
+}
+Instruction CPU::EI(){
+    return Instruction{[this](){int_enable = true;}, 1,4};
 }
 }

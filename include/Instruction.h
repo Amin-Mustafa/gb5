@@ -107,11 +107,11 @@ inline Instruction LD_8_mem(uint8_t& dest, uint8_t& src) {
 inline Instruction LD_8_imm(uint8_t& dest, uint8_t src) {
     return Instruction { Primitive::load_8_bit(dest, src), 2, 8 };
 }
-inline Instruction LD_16(uint8_t& dest_hi, uint8_t& dest_lo, uint8_t src_hi, uint8_t src_lo) {
+inline Instruction LD_16(uint8_t& dest_hi, uint8_t& dest_lo, uint16_t src) {
     return Instruction {
-        [&dest_hi, &dest_lo, src_hi, src_lo]() {
-            dest_hi = src_hi;
-            dest_lo = src_lo;
+        [&dest_hi, &dest_lo, src]() {
+            dest_hi = src >> 8;
+            dest_lo = src&0xff;
         }, 
         3,12
     };
@@ -135,11 +135,10 @@ inline Instruction INC_8(uint8_t& num, FlagRegister& fr) {
 inline Instruction INC_8_mem(uint8_t& num, FlagRegister& fr) {
     return Instruction{ Primitive::inc_8_bit(num, fr), 1, 12 };
 }
-inline Instruction ADD_16(uint8_t& num1_hi,uint8_t& num1_lo, uint8_t num2_hi,uint8_t num2_lo, FlagRegister& fr) {
+inline Instruction ADD_16(uint8_t& num1_hi,uint8_t& num1_lo, uint16_t num2, FlagRegister& fr) {
     return Instruction{
-        [&num1_hi, &num1_lo, num2_hi, num2_lo, &fr]() {
+        [&num1_hi, &num1_lo, num2, &fr]() {
             uint16_t num1 = Arithmetic::pair(num1_hi, num1_lo);
-            uint16_t num2 = Arithmetic::pair(num2_hi, num2_lo);
             int result = num1 + num2;
             fr.set_flag(Flag::NEGATIVE, 0);
             fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add(num1, num2));
@@ -150,6 +149,22 @@ inline Instruction ADD_16(uint8_t& num1_hi,uint8_t& num1_lo, uint8_t num2_hi,uin
         1,8
     };
 } 
+inline Instruction ADD_16_e8(uint16_t& num1, uint8_t num2, FlagRegister& fr){
+    return Instruction{
+        [&num1, num2, &fr](){
+            int8_t addend = static_cast<int8_t>(num2);
+            uint16_t res = num1 + addend;
+            bool hcarry = addend >= 0 ? Arithmetic::half_carry_add(num1, addend) : 
+                                    Arithmetic::half_carry_sub(num1, addend);
+            bool carry = addend >= 0 ? res > 0xffff : addend > num1;
+            fr.set_flag(Flag::ZERO, 0);
+            fr.set_flag(Flag::NEGATIVE, 0);
+            fr.set_flag(Flag::HALF_CARRY, hcarry );
+            fr.set_flag(Flag::CARRY, carry);
+        },
+        2,16
+    };
+}
 inline Instruction ADD_8_reg(uint8_t& num1, uint8_t& num2, bool carry, FlagRegister& fr) {
     return Instruction { Primitive::add_8_bit(num1, num2, carry, fr), 1,4 };
 }

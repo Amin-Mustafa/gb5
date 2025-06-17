@@ -19,6 +19,7 @@ public:
     uint16_t pc;
     uint16_t sp;
     int cycles;
+    bool int_enable;
 
     //memory
     MMU& memory;
@@ -49,6 +50,8 @@ private:
     Instruction RST(uint8_t destination);
     Instruction PUSH(uint8_t num_hi, uint8_t num_lo);
     Instruction POP(uint8_t& num_hi, uint8_t& num_lo);
+    Instruction DI();
+    Instruction EI();
 };
 }
 
