@@ -17,17 +17,17 @@ public:
     typedef std::function<void()> Opfn;
 
     Instruction()
-        :op{[](){}}, len{1}, cycles{4} {}
-    Instruction(Opfn operation, int length, int cycles)
-        :op{std::move(operation)}, len{length}, cycles{0} {}
+        :op{[](){}}, len{1}, num_ticks{4} {}
+    Instruction(Opfn operation, int length, int ticks)
+        :op{std::move(operation)}, len{length}, num_ticks{ticks} {}
     
     void execute() { op(); }
-    int length() {return len;}
-
+    int length() const {return len;}
+    int cycles() const {return num_ticks;}
 private:
     Opfn op;
     int len;
-    int cycles;
+    int num_ticks;
 };
 
 namespace Operation {

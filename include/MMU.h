@@ -3,7 +3,8 @@
 
 #include <vector>
 #include <stdint.h>
-#include <ROM.h>
+#include <string>
+#include "ROM.h"
 
 namespace SM83 {
 
@@ -27,6 +28,9 @@ public:
 
     uint8_t& operator[](uint16_t addr) {
         return read_address(addr);
+    }
+    void load(const std::string& filename) {
+        rom.load(filename);
     }
 private:
     ROM& rom;

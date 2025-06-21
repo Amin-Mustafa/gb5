@@ -1,8 +1,9 @@
+#include <iostream>
+#include <format>
 #include "../include/CPU.h"
 #include "../include/Instruction.h"
 #include "../include/MMU.h"
-#include <iostream>
-#include <format>
+#include "../include/Disassembler.h"
 
 namespace SM83 {
 
@@ -22,6 +23,12 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
     lo = pair & 0xff;
 }
 
+void CPU::fetch_and_execute() {
+    Instruction inst = decode(memory[pc]);
+    inst.execute();
+    cycles += inst.cycles();
+    pc += inst.length();
+}
 
 Instruction CPU::decode(uint8_t opcode) {
     using std::ref;
@@ -423,12 +430,8 @@ Instruction CPU::decode(uint8_t opcode) {
 
         default: return Instruction{[](){}, 1, 4};
     }
-}
-
-void CPU::fetch_and_execute() {
-    Instruction inst = decode(memory[pc]);
-    inst.execute();
-    pc += inst.length();
+    #undef N8
+    #undef N16
 }
 
 void CPU::push_to_stack(uint16_t num) {

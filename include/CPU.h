@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 #include <variant>
-#include "Register.h"
 #include <string>
+#include "Register.h"
 
 namespace SM83 {
 class Instruction;

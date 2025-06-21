@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <stdint.h>
+#include <string>
 
 namespace SM83 {
 
@@ -21,6 +22,7 @@ public:
     uint8_t& operator[] (uint16_t addr) {
         return contents[addr - start_addr];
     }
+    void load(const std::string& filename);
     uint16_t start() {return start_addr;}
     uint16_t size() {return contents.size();}
 };
