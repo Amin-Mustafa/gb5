@@ -2,13 +2,14 @@
 #include "../include/MMU.h"
 
 #include <iostream>
+#include <iomanip>
 #include <format>
 
 namespace SM83 {
 
 void Disassembler::disassemble_at(uint16_t pos) {
     uint8_t opcode = mem[pos];
-    static std::string registers[] = {"B", "C", "D", "E", "H", "L", "[HL]"};
+    static std::string registers[] = {"B", "C", "D", "E", "H", "L", "[HL]", "A"};
     static std::string reg_pairs[] = {"BC", "DE", "HL", "SP"};
     static std::string mem_pairs[] = {"[BC]", "[DE]", "[HL+]", "[HL-]"};
     static std::string control_conditions[] = {"NZ", "Z", "NC", "C"};
@@ -19,16 +20,20 @@ void Disassembler::disassemble_at(uint16_t pos) {
     #define BYTE1 mem[pos+1]
     #define BYTE2 mem[pos+2]
 
+    cout << format("PC: ${:04x} 0x{:02x}\t", pos, opcode);
+
+    cout << std::left << std::setw(10);
+
     //register loads
     if(opcode >= 0x40 && opcode <= 0x7F && opcode != 0x76){
         cout << format("LD {}, {}", registers[(opcode - 0x40)/8], registers[(opcode & 0x0f)%8])
-             << '\n';
+             << '\t';
         return;
     }
     //alu ops
     if(opcode >= 0x80 && opcode <= 0xBF) {
         cout << format("{} A, {}", alu_ops[(opcode-0x80)/8], registers[(opcode & 0x0f)%8])
-             << '\n';
+             << '\t';
         return;
     }
     
@@ -100,9 +105,9 @@ void Disassembler::disassemble_at(uint16_t pos) {
             cout << format("JR {} ${:02x}", control_conditions[(opcode - 0x20)/8], BYTE1);
             break;
 
-        case 0xC9: cout << format("RET ${:02x}{:02x}", BYTE2, BYTE1); break;
+        case 0xC9: cout << "RET"; break;
         case 0xC0: case 0xC8: case 0xD0: case 0xD8:
-            cout << format("RET {}, ${:02x}{:02x}", control_conditions[(opcode - 0xC0)/8], BYTE2, BYTE1);
+            cout << format("RET {}", control_conditions[(opcode - 0xC0)/8]);
             break;
         case 0xD9: cout << "RETI"; break;
         
@@ -151,7 +156,7 @@ void Disassembler::disassemble_at(uint16_t pos) {
         case 0xFB: cout << "EI"; break;
         default: cout << "UNIMPLEMENTED INSTRUCTION"; break;
     }
-    cout << '\n';
+    cout << "\t";
 
     #undef BYTE2
     #undef BYTE1

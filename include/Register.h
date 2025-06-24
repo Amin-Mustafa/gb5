@@ -28,6 +28,8 @@ public:
         reg = val;
         return *this;
     }
+    FlagRegister(const uint8_t& state):
+        reg{state} {}
 private:
     uint8_t reg;
 };

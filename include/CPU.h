@@ -13,11 +13,14 @@ class MMU;
 class CPU {
 public:
     using StateFunction = void (CPU::*)();  //pointer to state function
-    //Data registers
-    uint8_t A, B, C, D, E, H, L;
+    //flags
     FlagRegister F;
+    //program counter and stack pointer
     uint16_t pc;
     uint16_t sp;
+    //Data registers
+    uint8_t A, B, C, D, E, H, L;
+    
     int cycles;
     bool int_enable;
 
@@ -36,10 +39,10 @@ public:
     void fetch_and_execute();
 
 public:
-    CPU(MMU& memory): 
-        memory{memory}, current_state{&fetch_and_execute} {}
+    CPU(MMU& memory);
 
     void tick() {(this->*current_state)();}
+    void print_state();
 
 private:
     //CPU-control opcodes

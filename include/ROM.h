@@ -16,7 +16,7 @@ public:
         :start_addr{start}, contents(size) {}
 
     bool contains(uint16_t addr) const {
-        return addr > start_addr && addr < contents.size(); 
+        return (addr > start_addr) && (addr < start_addr + contents.size()); 
     }
 
     uint8_t& operator[] (uint16_t addr) {

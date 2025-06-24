@@ -23,6 +23,11 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
     lo = pair & 0xff;
 }
 
+CPU::CPU(MMU& memory):
+    F{0x80}, pc{0x100}, sp{0xFFFE},
+    A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D},
+    memory{memory}, current_state{&fetch_and_execute} {}
+
 void CPU::fetch_and_execute() {
     Instruction inst = decode(memory[pc]);
     inst.execute();
@@ -459,7 +464,7 @@ Instruction CPU::JR(uint8_t offset, bool condition) {
 }
 Instruction CPU::JP(uint16_t destination, bool condition) {
     if(condition) {
-        return Instruction{[this, destination](){ pc = destination; }, 3, 16};
+        return Instruction{[this, destination](){ pc = destination-3; }, 3, 16};
     }
     return Instruction{[](){}, 3, 12};
 }
@@ -468,7 +473,7 @@ Instruction CPU::CALL(uint16_t destination, bool condition) {
         return Instruction{
             [this, destination]() {
                 push_to_stack(pc);
-                pc = destination;
+                pc = destination-3;
             }, 
             3, 24
         };
@@ -506,4 +511,14 @@ Instruction CPU::DI(){
 Instruction CPU::EI(){
     return Instruction{[this](){int_enable = true;}, 1,4};
 }
+
+void CPU::print_state(){
+    std::cout << 
+        std::format("A:{:02x}, B:{:02x}, C:{:02x}, D:{:02x}, E:{:02x}, H:{:02x}, L:{:02x}, ",
+                    A, B, C, D, E, H, L) <<
+        std::format("[HL]:{:02x}, [{:04x}]:{:02x}, ", memory[pair(H,L)], pair(D,E), memory[pair(D,E)]) <<
+        std::format("PC:{:04x}, SP:{:04x}, F:{:d}{:d}{:d}{:d}\n", pc, sp, F.get_flag(Flag::ZERO),
+                    F.get_flag(Flag::NEGATIVE), F.get_flag(Flag::HALF_CARRY), F.get_flag(Flag::CARRY));
+}
+
 }

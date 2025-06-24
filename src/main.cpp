@@ -2,6 +2,7 @@
 #include "../include/MMU.h"
 #include "../include/Register.h"
 #include "../include/Disassembler.h"
+#include "../include/Instruction.h"
 #include <iostream>
 
 uint16_t pair(uint8_t hi, uint8_t lo) {
@@ -21,16 +22,10 @@ int main() {
     SM83::CPU cpu(mem);
     SM83::Disassembler dis(mem);
 
-    cpu.pc = 0x100;
-    cpu.memory[cpu.pc] = 0xC3;
-    cpu.memory[cpu.pc + 1] = 0x31;
-    cpu.memory[cpu.pc + 2] = 0x54;
-    cpu.B = 0x05;
-    cpu.C = 0x34;
-    cpu.A = 0x0f;
-
-    printf("BEFORE TICK: BC = %02x%02x, PC = %04x\n", cpu.B, cpu.C, cpu.pc);
-    dis.disassemble_at(cpu.pc);
-    cpu.tick();
-    printf("AFTER TICK: BC = %02x%02x, PC = %04x\n", cpu.B, cpu.C, cpu.pc);
+    mem.load("ROM/09-op r,r.gb");
+    while(true) {
+        dis.disassemble_at(cpu.pc);
+        cpu.print_state();
+        cpu.tick();
+    }
 }
