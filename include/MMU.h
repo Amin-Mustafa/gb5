@@ -5,24 +5,21 @@
 #include <stdint.h>
 #include <functional>
 #include <string>
-#include "ROM.h"
-#include "MemoryMap.h"
 
 namespace SM83 {
 
+class MemoryRegion;
+
 class MMU {
+private:   
+    std::vector<MemoryRegion*> memory_map;
+    MemoryRegion& region_of(uint16_t addr);
 public:
-    MMU(MemoryMap& map);
-
-    uint8_t& operator[](uint16_t addr) {
-        return read_address(addr);
-    }
-
-    void load(const std::string& filename) {rom.load(filename);}
-private:
-    ROM& rom;
-    uint8_t& read_address(uint16_t addr);
+    void add_region(MemoryRegion* region);
+    uint8_t read(uint16_t addr);
+    void write(uint16_t addr, uint8_t data);
 };
+
 
 }
 

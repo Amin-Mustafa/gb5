@@ -1,6 +1,9 @@
-#include "../include/CPU.h"
 #include "../include/MMU.h"
+#include "../include/ROM.h"
+#include "../include/MemoryContainer.h"
 #include "../include/Register.h"
+
+#include "../include/CPU.h"
 #include "../include/Disassembler.h"
 #include "../include/Instruction.h"
 #include <iostream>
@@ -17,15 +20,8 @@ void print_flags(const SM83::FlagRegister& fr) {
 }
 
 int main() {
-    SM83::MemoryMap map;
-    SM83::MMU mem(map);
+    SM83::MMU mem;
+    SM83::ROM rom(mem);
     SM83::CPU cpu(mem);
     SM83::Disassembler dis(mem);
-
-    mem.load("ROM/09-op r,r.gb");
-    while(true) {
-        dis.disassemble_at(cpu.pc);
-        cpu.print_state();
-        cpu.tick();
-    }
 }
