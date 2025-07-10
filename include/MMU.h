@@ -3,22 +3,12 @@
 
 #include <vector>
 #include <stdint.h>
+#include <functional>
 #include <string>
 #include "ROM.h"
+#include "MemoryMap.h"
 
 namespace SM83 {
-
-struct MemoryMap {
-    //structure to initialize MMU memory map
-    MemoryMap()
-        :romspace{new ROM{0x0000, 0xFFFF}} {}
-
-    ~MemoryMap() {
-        delete romspace;
-    }
-
-    ROM* romspace;
-};
 
 class MMU {
 public:
