@@ -471,7 +471,7 @@ Instruction CPU::CALL(uint16_t destination, bool condition) {
     if(condition) {
         return Instruction{
             [this, destination]() {
-                push_to_stack(pc);
+                push_to_stack(pc+2);
                 pc = destination-3;
             }, 
             3, 24

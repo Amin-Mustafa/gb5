@@ -21,10 +21,14 @@ void print_flags(const SM83::FlagRegister& fr) {
 int main() {
     SM83::MMU mem;
     SM83::ROM rom(mem);
+    SM83::MemoryContainer ram(0x8000, 0xFFFF, mem);
     SM83::CPU cpu(mem);
     SM83::Disassembler dis(mem);
 
     rom.load("ROM/09-op r,r.gb");
-    printf("%02x\n", mem.read(0x0101));
-    dis.disassemble_at(0x0101);
+    while(true) {
+        dis.disassemble_at(cpu.pc);
+        cpu.print_state();
+        cpu.tick();
+    }
 }

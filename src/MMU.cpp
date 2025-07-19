@@ -3,6 +3,10 @@
 
 namespace SM83{
 
+MMU::MMU() {
+    std::fill(memory_lookup.begin(), memory_lookup.end(), nullptr);
+}
+
 void MMU::add_region(MemoryRegion* region){
     memory_map.push_back(region);
     for(int addr = region->start(); addr <= region->end(); ++addr){
