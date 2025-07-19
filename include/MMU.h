@@ -10,10 +10,12 @@ namespace SM83 {
 
 class MemoryRegion;
 
+
 class MMU {
 private:   
     std::vector<MemoryRegion*> memory_map;
-    MemoryRegion& region_of(uint16_t addr);
+    std::array<MemoryRegion*, 0xFFFF> memory_lookup;
+    MemoryRegion* region_of(uint16_t addr);
 public:
     void add_region(MemoryRegion* region);
     uint8_t read(uint16_t addr);

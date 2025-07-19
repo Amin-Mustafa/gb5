@@ -3,7 +3,7 @@
 
 namespace SM83 {
 MemoryContainer::MemoryContainer(uint16_t start, uint16_t end, MMU& mmu)
-    : data(end - start + 1), 
+    :   data(end - start + 1), 
         region(
         start, end,
         [this, start](uint16_t addr)->uint8_t {return data[addr - start];},

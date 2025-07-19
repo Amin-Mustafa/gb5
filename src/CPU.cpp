@@ -2,7 +2,6 @@
 #include <format>
 #include "../include/CPU.h"
 #include "../include/Instruction.h"
-#include "../include/MMU.h"
 #include "../include/Disassembler.h"
 
 namespace SM83 {
@@ -29,7 +28,7 @@ CPU::CPU(MMU& memory):
     memory{memory}, current_state{&fetch_and_execute} {}
 
 void CPU::fetch_and_execute() {
-    Instruction inst = decode(memory[pc]);
+    Instruction inst = decode(memory.read(pc));
     inst.execute();
     cycles += inst.cycles();
     pc += inst.length();
@@ -37,14 +36,14 @@ void CPU::fetch_and_execute() {
 
 Instruction CPU::decode(uint8_t opcode) {
     using std::ref;
-    #define N8 memory[pc+1]
-    #define N16 pair(memory[pc+2], memory[pc+1])
+    #define N8 memory.read(pc+1)
+    #define N16 pair(memory.read(pc+2), memory.read(pc+1))
     switch(opcode) {
         using namespace Operation;
         //0x00 - 0x0F
         case 0x00: return Instruction{[](){}, 1, 4};    //NOP
         case 0x01: return LD_16(B,C, N16);
-        case 0x02: return LD_8_mem(memory[pair(B,C)], A);
+        case 0x02: return LD_8_mem_r(memory, pair(B,C), A);
         case 0x03: return INC_16(B,C);
         case 0x04: return INC_8(B,F);
         case 0x05: return DEC_8(B,F);
@@ -58,13 +57,13 @@ Instruction CPU::decode(uint8_t opcode) {
         };
         case 0x08: return Instruction {
             [this](){
-                memory[N16] = sp & 0xff;
-                memory[N16 + 1] = sp >> 8;
+                memory.write(N16, sp & 0xff);
+                memory.write(N16 + 1, sp >> 8);
             },
             3,20
         };
         case 0x09: return ADD_16(H,L, pair(B,C) ,F);
-        case 0x0A: return LD_8_mem(A, memory[pair(B,C)]);
+        case 0x0A: return LD_8_r_mem(A, memory, pair(B,C));
         case 0x0B: return DEC_16(B,C);
         case 0x0C: return INC_8(C, F);
         case 0x0D: return DEC_8(C, F);
@@ -80,7 +79,7 @@ Instruction CPU::decode(uint8_t opcode) {
         //0x10 - 0x1F
         case 0x10: break;   //TODO
         case 0x11: return LD_16(D,E,N16);
-        case 0x12: return LD_8_mem(memory[pair(D,E)], A);
+        case 0x12: return LD_8_mem_r(memory, pair(D,E), A);
         case 0x13: return INC_16(D,E);
         case 0x14: return INC_8(D, F);
         case 0x15: return DEC_8(D, F);
@@ -95,7 +94,7 @@ Instruction CPU::decode(uint8_t opcode) {
         };
         case 0x18: return JR(N8, true);
         case 0x19: return ADD_16(H,L, pair(D,E) ,F);
-        case 0x1A: return LD_8_mem(A, memory[pair(D,E)]);
+        case 0x1A: return LD_8_r_mem(A, memory, pair(D,E));
         case 0x1B: return DEC_16(D,E);
         case 0x1C: return INC_8(E,F);
         case 0x1D: return DEC_8(E,F);
@@ -114,7 +113,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x21: return LD_16(H,L, N16);
         case 0x22: return Instruction {
             [this]() {
-                memory[pair(H,L)] = A;
+                memory.write(pair(H,L), A);
                 inc_pair(H, L);
             },
             1,8
@@ -128,7 +127,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x29: return ADD_16(H,L, pair(H,L), F);
         case 0x2A: return Instruction {
             [this]() {
-                A = memory[pair(H,L)];
+                A = memory.read(pair(H,L));
                 inc_pair(H,L);
             },
             1,8
@@ -153,16 +152,16 @@ Instruction CPU::decode(uint8_t opcode) {
         };
         case 0x32: return Instruction {
             [this]() {
-                memory[pair(H,L)] = A;
+                memory.write(pair(H,L), A);
                 dec_pair(H, L);
             },
             1,8
         };
         case 0x33: return Instruction{[this](){sp++;}, 1,8};
-        case 0x34: return INC_8_mem(memory[pair(H,L)], F);
-        case 0x35: return DEC_8_mem(memory[pair(H,L)], F);
+        case 0x34: return INC_8_mem(memory,pair(H,L), F);
+        case 0x35: return DEC_8_mem(memory,pair(H,L), F);
         case 0x36: return Instruction{
-            [this]() { memory[pair(H,L)] = memory[pc + 1]; }, 2,12
+            [this]() { memory.write(pair(H,L), N8); }, 2,12
         };
         case 0x37: return Instruction {
             [this]() { 
@@ -174,7 +173,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x39: return ADD_16(H,L, sp, F);
         case 0x3A: return Instruction {
             [this]() {
-                A = memory[pair(H,L)];
+                A = memory.read(pair(H,L));
                 dec_pair(H,L);
             },
             1,8
@@ -197,7 +196,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x43: return LD_8_reg(B,E);
         case 0x44: return LD_8_reg(B,H);
         case 0x45: return LD_8_reg(B,L);
-        case 0x46: return LD_8_mem(B,memory[pair(H,L)]);
+        case 0x46: return LD_8_r_mem(B,memory, pair(H,L));
         case 0x47: return LD_8_reg(B,A);
         case 0x48: return LD_8_reg(C,B);
         case 0x49: return LD_8_reg(C,C);
@@ -205,7 +204,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x4B: return LD_8_reg(C,E);
         case 0x4C: return LD_8_reg(C,H);
         case 0x4D: return LD_8_reg(C,L);
-        case 0x4E: return LD_8_mem(C,memory[pair(H,L)]);
+        case 0x4E: return LD_8_r_mem(C,memory,pair(H,L));
         case 0x4F: return LD_8_reg(C,A);
 
         //0x50 - 0x5F
@@ -215,7 +214,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x53: return LD_8_reg(D,E);
         case 0x54: return LD_8_reg(D,H);
         case 0x55: return LD_8_reg(D,L);
-        case 0x56: return LD_8_mem(D,memory[pair(H,L)]);
+        case 0x56: return LD_8_r_mem(D,memory,pair(H,L));
         case 0x57: return LD_8_reg(D,A);
         case 0x58: return LD_8_reg(E,B);
         case 0x59: return LD_8_reg(E,C);
@@ -223,7 +222,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x5B: return LD_8_reg(E,E);
         case 0x5C: return LD_8_reg(E,H);
         case 0x5D: return LD_8_reg(E,L);
-        case 0x5E: return LD_8_mem(E,memory[pair(H,L)]);
+        case 0x5E: return LD_8_r_mem(E,memory,pair(H,L));
         case 0x5F: return LD_8_reg(E,A);
 
         //0x60 - 0x6F
@@ -233,7 +232,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x63: return LD_8_reg(H,E);
         case 0x64: return LD_8_reg(H,H);
         case 0x65: return LD_8_reg(H,L);
-        case 0x66: return LD_8_mem(H,memory[pair(H,L)]);
+        case 0x66: return LD_8_r_mem(H,memory,pair(H,L));
         case 0x67: return LD_8_reg(H,A);
         case 0x68: return LD_8_reg(L,B);
         case 0x69: return LD_8_reg(L,C);
@@ -241,62 +240,62 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0x6B: return LD_8_reg(L,E);
         case 0x6C: return LD_8_reg(L,H);
         case 0x6D: return LD_8_reg(L,L);
-        case 0x6E: return LD_8_mem(L,memory[pair(H,L)]);
+        case 0x6E: return LD_8_r_mem(L,memory,pair(H,L));
         case 0x6F: return LD_8_reg(L,A);
 
         //0x70 - 0x7F
-        case 0x70: return LD_8_mem(memory[pair(H,L)],B);
-        case 0x71: return LD_8_mem(memory[pair(H,L)],C);
-        case 0x72: return LD_8_mem(memory[pair(H,L)],D);
-        case 0x73: return LD_8_mem(memory[pair(H,L)],E);
-        case 0x74: return LD_8_mem(memory[pair(H,L)],H);
-        case 0x75: return LD_8_mem(memory[pair(H,L)],L);
+        case 0x70: return LD_8_mem_r(memory, pair(H,L), B);
+        case 0x71: return LD_8_mem_r(memory, pair(H,L), C);
+        case 0x72: return LD_8_mem_r(memory, pair(H,L), D);
+        case 0x73: return LD_8_mem_r(memory, pair(H,L), E);
+        case 0x74: return LD_8_mem_r(memory, pair(H,L), H);
+        case 0x75: return LD_8_mem_r(memory, pair(H,L), L);
         case 0x76: break;   //TODO: HALT
-        case 0x77: return LD_8_mem(memory[pair(H,L)],A);
+        case 0x77: return LD_8_mem_r(memory, pair(H,L), A);
         case 0x78: return LD_8_reg(A,B);
         case 0x79: return LD_8_reg(A,C);
         case 0x7A: return LD_8_reg(A,D);
         case 0x7B: return LD_8_reg(A,E);
         case 0x7C: return LD_8_reg(A,H);
         case 0x7D: return LD_8_reg(A,L);
-        case 0x7E: return LD_8_mem(A,memory[pair(H,L)]);
+        case 0x7E: return LD_8_r_mem(A,memory,pair(H,L));
         case 0x7F: return LD_8_reg(A,A);
 
         //0x80 - 0x8F
-        case 0x80: return ADD_8_reg(A,B,0,F);
-        case 0x81: return ADD_8_reg(A,C,0,F);
-        case 0x82: return ADD_8_reg(A,D,0,F);
-        case 0x83: return ADD_8_reg(A,E,0,F);
-        case 0x84: return ADD_8_reg(A,H,0,F);
-        case 0x85: return ADD_8_reg(A,L,0,F);
-        case 0x86: return ADD_8_mem(A,memory[pair(H,L)],0,F);
-        case 0x87: return ADD_8_reg(A,A,0,F);
-        case 0x88: return ADD_8_reg(A,B,1,F);
-        case 0x89: return ADD_8_reg(A,C,1,F);
-        case 0x8A: return ADD_8_reg(A,D,1,F);
-        case 0x8B: return ADD_8_reg(A,E,1,F);
-        case 0x8C: return ADD_8_reg(A,H,1,F);
-        case 0x8D: return ADD_8_reg(A,L,1,F);
-        case 0x8E: return ADD_8_mem(A,memory[pair(H,L)],1,F);
-        case 0x8F: return ADD_8_reg(A,A,1,F);
+        case 0x80: return ADD_8_reg(A,B,F);
+        case 0x81: return ADD_8_reg(A,C,F);
+        case 0x82: return ADD_8_reg(A,D,F);
+        case 0x83: return ADD_8_reg(A,E,F);
+        case 0x84: return ADD_8_reg(A,H,F);
+        case 0x85: return ADD_8_reg(A,L,F);
+        case 0x86: return ADD_8_mem(A,memory,pair(H,L),F);
+        case 0x87: return ADD_8_reg(A,A,F);
+        case 0x88: return ADD_8_reg(A,B,F);
+        case 0x89: return ADD_8_reg(A,C,F);
+        case 0x8A: return ADD_8_reg(A,D,F);
+        case 0x8B: return ADD_8_reg(A,E,F);
+        case 0x8C: return ADD_8_reg(A,H,F);
+        case 0x8D: return ADD_8_reg(A,L,F);
+        case 0x8E: return ADD_8_mem(A,memory,pair(H,L),F);
+        case 0x8F: return ADD_8_reg(A,A,F);
 
         //0x90 - 0x9F
-        case 0x90: return SUB_8_reg(A,B,0,F);
-        case 0x91: return SUB_8_reg(A,C,0,F);
-        case 0x92: return SUB_8_reg(A,D,0,F);
-        case 0x93: return SUB_8_reg(A,E,0,F);
-        case 0x94: return SUB_8_reg(A,H,0,F);
-        case 0x95: return SUB_8_reg(A,L,0,F);
-        case 0x96: return SUB_8_mem(A,memory[pair(H,L)],0,F);
-        case 0x97: return SUB_8_reg(A,A,0,F);
-        case 0x98: return SUB_8_reg(A,B,1,F);
-        case 0x99: return SUB_8_reg(A,C,1,F);
-        case 0x9A: return SUB_8_reg(A,D,1,F);
-        case 0x9B: return SUB_8_reg(A,E,1,F);
-        case 0x9C: return SUB_8_reg(A,H,1,F);
-        case 0x9D: return SUB_8_reg(A,L,1,F);
-        case 0x9E: return SUB_8_mem(A,memory[pair(H,L)],1,F);
-        case 0x9F: return SUB_8_reg(A,A,1,F);
+        case 0x90: return SUB_8_reg(A,B,F);
+        case 0x91: return SUB_8_reg(A,C,F);
+        case 0x92: return SUB_8_reg(A,D,F);
+        case 0x93: return SUB_8_reg(A,E,F);
+        case 0x94: return SUB_8_reg(A,H,F);
+        case 0x95: return SUB_8_reg(A,L,F);
+        case 0x96: return SUB_8_mem(A,memory,pair(H,L),F);
+        case 0x97: return SUB_8_reg(A,A,F);
+        case 0x98: return SUB_8_reg(A,B,F);
+        case 0x99: return SUB_8_reg(A,C,F);
+        case 0x9A: return SUB_8_reg(A,D,F);
+        case 0x9B: return SUB_8_reg(A,E,F);
+        case 0x9C: return SUB_8_reg(A,H,F);
+        case 0x9D: return SUB_8_reg(A,L,F);
+        case 0x9E: return SUB_8_mem(A, memory, pair(H,L),F);
+        case 0x9F: return SUB_8_reg(A,A,F);
 
         //0xA0 - 0xAF
         case 0xA0: return AND_8_reg(A,B,F);
@@ -305,7 +304,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0xA3: return AND_8_reg(A,E,F);
         case 0xA4: return AND_8_reg(A,H,F);
         case 0xA5: return AND_8_reg(A,L,F);
-        case 0xA6: return AND_8_mem(A,memory[pair(H,L)],F);
+        case 0xA6: return AND_8_mem(A,memory,pair(H,L),F);
         case 0xA7: return AND_8_reg(A,A,F);
         case 0xA8: return XOR_8_reg(A,B,F);
         case 0xA9: return XOR_8_reg(A,C,F);
@@ -313,7 +312,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0xAB: return XOR_8_reg(A,E,F);
         case 0xAC: return XOR_8_reg(A,H,F);
         case 0xAD: return XOR_8_reg(A,L,F);
-        case 0xAE: return XOR_8_mem(A,memory[pair(H,L)],F);
+        case 0xAE: return XOR_8_mem(A,memory,pair(H,L),F);
         case 0xAF: return XOR_8_reg(A,A,F);
         
         //0xB0 - 0xBF
@@ -323,7 +322,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0xB3: return OR_8_reg(A,E,F);
         case 0xB4: return OR_8_reg(A,H,F);
         case 0xB5: return OR_8_reg(A,L,F);
-        case 0xB6: return OR_8_mem(A,memory[pair(H,L)],F);
+        case 0xB6: return OR_8_mem(A,memory,pair(H,L),F);
         case 0xB7: return OR_8_reg(A,A,F);
         case 0xB8: return CP_8_reg(A,B,F);
         case 0xB9: return CP_8_reg(A,C,F);
@@ -331,7 +330,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0xBB: return CP_8_reg(A,E,F);
         case 0xBC: return CP_8_reg(A,H,F);
         case 0xBD: return CP_8_reg(A,L,F);
-        case 0xBE: return CP_8_mem(A,memory[pair(H,L)],F);
+        case 0xBE: return CP_8_mem(A,memory,pair(H,L),F);
         case 0xBF: return CP_8_reg(A,A,F);
 
         //0xC0 - 0xCF
@@ -359,7 +358,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0xD3: break;   //NOP
         case 0xD4: return CALL(N16, !F.get_flag(Flag::CARRY));
         case 0xD5: return PUSH(D,E);
-        case 0xD6: return SUB_8_imm(A, N8, 0, F);
+        case 0xD6: return SUB_8_imm(A, N8, F);
         case 0xD7: return RST(0x10);
         case 0xD8: return Instruction {
             [this](){pop_from_stack(pc);}, 1, 16
@@ -375,13 +374,13 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0xDB: break;   //NOP
         case 0xDC: return JP(N16, F.get_flag(Flag::CARRY));
         case 0xDD: break;   //NOP
-        case 0xDE: return SUB_8_imm(A, N8, 1, F);
+        case 0xDE: return SUB_8_imm(A, N8, F);
         case 0xDF: return RST(0x18);
         
         //0xE0 - 0xEF
-        case 0xE0: return Instruction{[this](){memory[0xFF00 + N8] = A;}, 2, 12};
+        case 0xE0: return Instruction{[this](){memory.write(0xFF00 + N8, A);}, 2, 12};
         case 0xE1: return POP(H,L);
-        case 0xE2: return Instruction{[this](){memory[0xFF00 + C]  = A;}, 1, 8};
+        case 0xE2: return Instruction{[this](){memory.write(0xFF00 + C, A);}, 1, 8};
         case 0xE3: break;   //NOP
         case 0xE4: break;   //NOP
         case 0xE5: return PUSH(H,L);
@@ -392,7 +391,7 @@ Instruction CPU::decode(uint8_t opcode) {
             [this](){pc = pair(H,L);}, 1, 4
         };
         case 0xEA: return Instruction{
-            [this](){memory[N16] = A;}, 3, 16
+            [this](){memory.write(N16, A);}, 3, 16
         };
         case 0xEB:
         case 0xEC:
@@ -401,7 +400,7 @@ Instruction CPU::decode(uint8_t opcode) {
         case 0xEF: return RST(0x28);
 
         //0xF0 - 0xFF
-        case 0xF0: return Instruction{[this](){A = memory[0xFF00 + N8];}, 2,12};
+        case 0xF0: return Instruction{[this](){A = memory.read(0xFF00 + N8);}, 2,12};
         case 0xF1: return Instruction{
             [this](){
                 uint8_t flags = F.get_state();
@@ -410,7 +409,7 @@ Instruction CPU::decode(uint8_t opcode) {
             },
             1, 12
         };
-        case 0xF2: return Instruction{[this](){A = memory[0xFF00  + C];}, 1, 8};
+        case 0xF2: return Instruction{[this](){A = memory.read(0xFF00  + C);}, 1, 8};
         case 0xF3: return DI();
         case 0xF4: break;   //NOP
         case 0xF5: PUSH(A, F.get_state());
@@ -426,7 +425,7 @@ Instruction CPU::decode(uint8_t opcode) {
             2,12
         };
         case 0xF9: return Instruction{[this](){sp = pair(H,L);}, 1,8};
-        case 0xFA: return Instruction{[this](){A = memory[N16];}, 3,16};
+        case 0xFA: return Instruction{[this](){A = memory.read(N16);}, 3,16};
         case 0xFB: return EI();
         case 0xFC:
         case 0xFD: break;   //NOP
@@ -440,18 +439,18 @@ Instruction CPU::decode(uint8_t opcode) {
 }
 
 void CPU::push_to_stack(uint16_t num) {
-    memory[sp-1] = num >> 8;
-	memory[sp-2] = num & 0xff;
+    memory.write(sp-1, num >> 8);
+	memory.write(sp-2, num & 0xff);
 	sp -= 2;
 }
 
 void CPU::pop_from_stack(uint8_t& num_hi, uint8_t& num_lo) {
-    num_lo = memory[sp];
-    num_hi = memory[sp+1];
+    num_lo = memory.read(sp);
+    num_hi = memory.read(sp+1);
     sp += 2;
 }
 void CPU::pop_from_stack(uint16_t& num) {
-    num = pair(memory[sp+1], memory[sp]);
+    num = pair(memory.read(sp+1), memory.read(sp));
     sp += 2;
 }
 
@@ -516,7 +515,7 @@ void CPU::print_state(){
     std::cout << 
         std::format("A:{:02x}, B:{:02x}, C:{:02x}, D:{:02x}, E:{:02x}, H:{:02x}, L:{:02x}, ",
                     A, B, C, D, E, H, L) <<
-        std::format("[HL]:{:02x}, [{:04x}]:{:02x}, ", memory[pair(H,L)], pair(D,E), memory[pair(D,E)]) <<
+        std::format("[HL]:{:02x}, [{:04x}]:{:02x}, ", memory.read(pair(H,L)), pair(D,E), memory.read(pair(D,E))) <<
         std::format("PC:{:04x}, SP:{:04x}, F:{:d}{:d}{:d}{:d}\n", pc, sp, F.get_flag(Flag::ZERO),
                     F.get_flag(Flag::NEGATIVE), F.get_flag(Flag::HALF_CARRY), F.get_flag(Flag::CARRY));
 }

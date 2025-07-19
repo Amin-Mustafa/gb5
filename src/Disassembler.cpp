@@ -8,7 +8,7 @@
 namespace SM83 {
 
 void Disassembler::disassemble_at(uint16_t pos) {
-    uint8_t opcode = mem[pos];
+    uint8_t opcode = mem.read(pos);
     static std::string registers[] = {"B", "C", "D", "E", "H", "L", "[HL]", "A"};
     static std::string reg_pairs[] = {"BC", "DE", "HL", "SP"};
     static std::string mem_pairs[] = {"[BC]", "[DE]", "[HL+]", "[HL-]"};
@@ -17,8 +17,8 @@ void Disassembler::disassemble_at(uint16_t pos) {
 
     using std::cout;
     using std::format;
-    #define BYTE1 mem[pos+1]
-    #define BYTE2 mem[pos+2]
+    #define BYTE1 mem.read(pos+1)
+    #define BYTE2 mem.read(pos+2)
 
     cout << format("PC: ${:04x} 0x{:02x}\t", pos, opcode);
 

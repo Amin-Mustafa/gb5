@@ -5,7 +5,6 @@
 
 #include "../include/CPU.h"
 #include "../include/Disassembler.h"
-#include "../include/Instruction.h"
 #include <iostream>
 
 uint16_t pair(uint8_t hi, uint8_t lo) {
@@ -24,4 +23,8 @@ int main() {
     SM83::ROM rom(mem);
     SM83::CPU cpu(mem);
     SM83::Disassembler dis(mem);
+
+    rom.load("ROM/09-op r,r.gb");
+    printf("%02x\n", mem.read(0x0101));
+    dis.disassemble_at(0x0101);
 }
