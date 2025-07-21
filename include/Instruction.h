@@ -82,6 +82,7 @@ namespace Operation {
     inline void compare_8_bit(uint8_t num1, uint8_t num2, FlagRegister fr){
         sub_8_bit(num1, num2, 0, fr);    //by-value sub, none of the arguments changed
     }
+    
     } //Primitive
  
 //------------------------ LOADS ------------------------//

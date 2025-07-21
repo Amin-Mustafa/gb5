@@ -14,7 +14,7 @@ class MemoryRegion;
 class MMU {
 private:   
     std::vector<MemoryRegion*> memory_map;
-    std::array<MemoryRegion*, 0xFFFF> memory_lookup;
+    std::array<MemoryRegion*, 0x10000> memory_lookup;
     MemoryRegion* region_of(uint16_t addr);
 public:
     MMU();
