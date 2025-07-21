@@ -23,16 +23,26 @@ public:
     uint16_t pc;
     uint16_t sp;
     //Data registers
-    uint8_t A, B, C, D, E, H, L;
+    DataRegister A, B, C, D, E, H, L;
+    MemRegister M;
     
     int cycles;
     bool int_enable;
 
     //memory
     MMU& memory;
+    uint8_t read_memory(uint16_t addr) {
+        cycles += 4;    //CPU memory access costs 4 cycles 
+        return memory.read(addr);
+     }
+    void write_memory(uint16_t addr, uint8_t val) { 
+        cycles += 4;   
+        memory.write(addr, val); 
+    }
     
 private:
     using StateFunction = void (CPU::*)();  //pointer to state function
+
     //internal functions
     Instruction decode(uint8_t opcode);
     std::array<Instruction, 256> instruction_table;

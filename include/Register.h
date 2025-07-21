@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-class MMU;
+class CPU;
 
 enum class Flag {
     CARRY = 4, HALF_CARRY, NEGATIVE, ZERO
@@ -36,12 +36,12 @@ public:
 
 class MemRegister : public Register {
 private: 
-    MMU& mem;
-    uint8_t& hi;
-    uint8_t& lo;
+    CPU& cpu;
+    DataRegister& hi;
+    DataRegister& lo;
 public:    
-    MemRegister(MMU& memory, uint8_t& high, uint8_t& low)    
-        :mem{memory}, hi{high}, lo{low} {}
+    MemRegister(CPU& cpu, DataRegister& high, DataRegister& low)    
+        :cpu{cpu}, hi{high}, lo{low} {}
 
     uint8_t get() const override;
     void set(uint8_t val) override;
@@ -72,7 +72,10 @@ class RegisterPair {
 private: 
     DataRegister& hi;
     DataRegister& lo;
-public:    
+public: 
+    RegisterPair(DataRegister& high, DataRegister& low) 
+        :hi{high}, lo{low} {}
+        
     uint16_t get() const {
         return ( static_cast<uint16_t>(hi.get()) << 8 ) | lo.get();
     }       

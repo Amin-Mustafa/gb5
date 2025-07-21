@@ -1,12 +1,12 @@
 #include "../include/Register.h"
-#include "../include/MMU.h"
+#include "../include/CPU.h"
 
 uint8_t MemRegister::get() const {
     uint16_t addr =  ( static_cast<uint16_t>(hi) << 8 ) | lo;
-    return mem.read(addr);
+    return cpu.read_memory(addr);
 }
 
 void MemRegister::set(uint8_t val) {
     uint16_t addr =  ( static_cast<uint16_t>(hi) << 8 ) | lo;
-    mem.write(addr, val);
+    cpu.write_memory(addr, val);
 }

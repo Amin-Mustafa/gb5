@@ -23,8 +23,8 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
 
 CPU::CPU(MMU& memory):
     F{0x80}, pc{0x100}, sp{0xFFFE},
-    A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D},
-    memory{memory}, current_state{&fetch_and_execute} {}
+    A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, 
+    M{*this, H, L}, memory{memory}, current_state{&fetch_and_execute} {}
 
 void CPU::fetch_and_execute() {
     Instruction inst = decode(memory.read(pc));
@@ -36,12 +36,21 @@ void CPU::fetch_and_execute() {
 Instruction CPU::decode(uint8_t opcode) {
     #define N8 memory.read(pc+1)
     #define N16 pair(memory.read(pc+2), memory.read(pc+1))
+    static std::vector<Register*> regs{&B,&C,&D,&E,&H,&L,&M,&A};
+    static std::vector<Register*> mem_pairs {
+        new MemRegister{*this, B, C},
+        new MemRegister{*this, D, E},
+        new MemRegister{*this, H, L},
+    };
+    static std::vector<RegisterPair*> reg_pairs {
+        new RegisterPair{B,C}, new RegisterPair{D,E}, new RegisterPair{H,L}
+    };
     switch(opcode) {
         using namespace Operation;
         //0x00 - 0x0F
         case 0x00: return Instruction{[](){}, 1, 4};    //NOP
         case 0x01: return LD_16(B,C, N16);
-        case 0x02: return LD_8_mem_r(memory, pair(B,C), A);
+        case 0x02: return LD_8(MemRegister{*this, B, C}, A);
         case 0x03: return INC_16(B,C);
         case 0x04: return INC_8(B,F);
         case 0x05: return DEC_8(B,F);
