@@ -4,8 +4,6 @@
 #include <functional>
 #include <cstdint>
 
-namespace SM83{
-    
 class MemoryRegion {
 private:
     uint16_t start_addr;
@@ -27,5 +25,4 @@ public:
         }
 };
 
-}
 #endif

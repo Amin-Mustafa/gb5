@@ -3,8 +3,6 @@
 #include "../include/ROM.h"
 #include "../include/MMU.h"
 
-namespace SM83{
-
 ROM::ROM(MMU& mmu)
 :data(0x8000), 
  region {
@@ -21,6 +19,4 @@ void ROM::load(const std::string& filename){
 	std::vector<unsigned char> buffer(std::istreambuf_iterator<char>(ifs), {});
 	std::cout << buffer.size() << '\n';
 	std::copy(buffer.begin(), buffer.end(), data.begin());
-}
-
 }

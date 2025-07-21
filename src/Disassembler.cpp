@@ -5,8 +5,6 @@
 #include <iomanip>
 #include <format>
 
-namespace SM83 {
-
 void Disassembler::disassemble_at(uint16_t pos) {
     uint8_t opcode = mem.read(pos);
     static std::string registers[] = {"B", "C", "D", "E", "H", "L", "[HL]", "A"};
@@ -160,6 +158,4 @@ void Disassembler::disassemble_at(uint16_t pos) {
 
     #undef BYTE2
     #undef BYTE1
-}
-
 }

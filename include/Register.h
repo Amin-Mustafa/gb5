@@ -3,7 +3,6 @@
 
 #include <cstdint>
 
-namespace SM83 {
 enum class Flag {
     CARRY = 4, HALF_CARRY, NEGATIVE, ZERO
 };
@@ -33,6 +32,5 @@ public:
 private:
     uint8_t reg;
 };
-}
 
 #endif

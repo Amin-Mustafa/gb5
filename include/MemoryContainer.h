@@ -3,8 +3,6 @@
 
 #include "MemoryRegion.h"
 
-namespace SM83{
-
 class MMU;
 
 class MemoryContainer {
@@ -15,7 +13,5 @@ private:
 public:
     MemoryContainer(uint16_t start, uint16_t end, MMU& mmu);
 };
-
-}
 
 #endif

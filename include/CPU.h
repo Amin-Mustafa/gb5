@@ -1,18 +1,22 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include <stdint.h>
-#include <variant>
+#include <cstdint>
+#include <array>
 #include <string>
 #include "Register.h"
+#include "Instruction.h"
 
-namespace SM83 {
 class Instruction;
 class MMU;
 
 class CPU {
 public:
-    using StateFunction = void (CPU::*)();  //pointer to state function
+    CPU(MMU& memory);
+
+    void tick() {(this->*current_state)();}
+    void print_state();
+
     //flags
     FlagRegister F;
     //program counter and stack pointer
@@ -26,9 +30,13 @@ public:
 
     //memory
     MMU& memory;
-
+    
+private:
+    using StateFunction = void (CPU::*)();  //pointer to state function
     //internal functions
     Instruction decode(uint8_t opcode);
+    std::array<Instruction, 256> instruction_table;
+    void init_instruction_table();
     //stack ops
     void push_to_stack(uint16_t num);
     void pop_from_stack(uint8_t& num_hi, uint8_t& num_lo);
@@ -38,13 +46,6 @@ public:
     StateFunction current_state;
     void fetch_and_execute();
 
-public:
-    CPU(MMU& memory);
-
-    void tick() {(this->*current_state)();}
-    void print_state();
-
-private:
     //CPU-control opcodes
     Instruction JR(uint8_t offset, bool condition);
     Instruction JP(uint16_t destination, bool condition);
@@ -56,6 +57,5 @@ private:
     Instruction DI();
     Instruction EI();
 };
-}
 
 #endif

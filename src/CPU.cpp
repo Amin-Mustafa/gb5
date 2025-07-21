@@ -1,10 +1,9 @@
 #include <iostream>
 #include <format>
 #include "../include/CPU.h"
+#include "../include/MMU.h"
 #include "../include/Instruction.h"
 #include "../include/Disassembler.h"
-
-namespace SM83 {
 
 constexpr uint16_t pair(uint8_t hi, uint8_t lo) {
     return (hi << 8) | lo;
@@ -35,7 +34,6 @@ void CPU::fetch_and_execute() {
 }
 
 Instruction CPU::decode(uint8_t opcode) {
-    using std::ref;
     #define N8 memory.read(pc+1)
     #define N16 pair(memory.read(pc+2), memory.read(pc+1))
     switch(opcode) {
@@ -518,6 +516,4 @@ void CPU::print_state(){
         std::format("[HL]:{:02x}, [{:04x}]:{:02x}, ", memory.read(pair(H,L)), pair(D,E), memory.read(pair(D,E))) <<
         std::format("PC:{:04x}, SP:{:04x}, F:{:d}{:d}{:d}{:d}\n", pc, sp, F.get_flag(Flag::ZERO),
                     F.get_flag(Flag::NEGATIVE), F.get_flag(Flag::HALF_CARRY), F.get_flag(Flag::CARRY));
-}
-
 }

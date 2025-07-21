@@ -6,8 +6,6 @@
 #include <string>
 #include "MemoryRegion.h"
 
-namespace SM83 {
-
 class MMU;
 
 class ROM {
@@ -19,6 +17,5 @@ public:
     ROM(MMU& mmu);
 };
 
-}
 
 #endif

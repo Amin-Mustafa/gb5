@@ -3,8 +3,6 @@
 
 #include <cstdint>
 
-namespace SM83{
-
 class MMU;
 
 class Disassembler {
@@ -15,7 +13,5 @@ public:
     Disassembler(MMU& memory) :mem{memory} {}
     void disassemble_at(uint16_t pos);
 };
-
-}
 
 #endif

@@ -1,8 +1,6 @@
 #include "../include/MMU.h"
 #include "../include/MemoryRegion.h"
 
-namespace SM83{
-
 MMU::MMU() {
     std::fill(memory_lookup.begin(), memory_lookup.end(), nullptr);
 }
@@ -21,6 +19,4 @@ uint8_t MMU::read(uint16_t addr) {
 }
 void MMU::write(uint16_t addr, uint8_t val) {
     region_of(addr)->write(addr, val);
-}
-
 }

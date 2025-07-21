@@ -1,7 +1,6 @@
 #include "../include/MemoryContainer.h"
 #include "../include/MMU.h"
 
-namespace SM83 {
 MemoryContainer::MemoryContainer(uint16_t start, uint16_t end, MMU& mmu)
     :   data(end - start + 1), 
         region(
@@ -12,5 +11,3 @@ MemoryContainer::MemoryContainer(uint16_t start, uint16_t end, MMU& mmu)
     {
         mmu.add_region(&region);
     }
-
-}
