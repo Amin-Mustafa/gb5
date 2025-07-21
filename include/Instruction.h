@@ -7,7 +7,7 @@
 #include <cstdint>
 
 class MMU;
-class FlagRegister;
+class Register;
 
 class Instruction {
 public:
@@ -29,48 +29,31 @@ private:
 
 namespace Operation {
 //------------------------ LOADS ------------------------//
-Instruction LD_8_reg(uint8_t& dest, uint8_t& src);
-Instruction LD_8_mem_r(MMU& mmu, uint16_t addr, uint8_t& src);
-Instruction LD_8_r_mem(uint8_t& dest, MMU& mmu, uint16_t addr);
-Instruction LD_8_imm(uint8_t& dest, uint8_t src);
-Instruction LD_16(uint8_t& dest_hi, uint8_t& dest_lo, uint16_t src);
+Instruction LD_8(Register& dest, uint8_t src);
+Instruction LD_16(RegisterPair& dest, uint16_t src);
+Instruction LD_16(uint16_t& dest, uint16_t src);
 
 //------------------- ARITHMETIC -------------------//
-Instruction INC_16(uint8_t& hi, uint8_t& lo);
-Instruction INC_8(uint8_t& num, FlagRegister& fr);
-Instruction INC_8_mem(MMU& mmu, uint16_t addr, FlagRegister& fr);
-Instruction ADD_16(uint8_t& num1_hi,uint8_t& num1_lo, uint16_t num2, FlagRegister& fr);
+//8-bit
+Instruction INC_8(Register& num, FlagRegister& fr);
+Instruction ADD_8(Register& num1, const Register& num2, FlagRegister& fr);
+Instruction ADC_8(Register& num1, const Register& num2, FlagRegister& fr);
+Instruction SUB_8(Register& num1, const Register& num2, FlagRegister& fr);
+Instruction SBB_8(Register& num1, const Register& num2, FlagRegister& fr);
+Instruction DEC_8(Register& num, FlagRegister& fr);
+//16-bit
+Instruction INC_16(RegisterPair& num);
+Instruction ADD_16(RegisterPair& num, uint16_t num2, FlagRegister& fr);
+Instruction ADD_16(uint16_t& num, uint16_t num2, FlagRegister& fr);
 Instruction ADD_16_e8(uint16_t& num1, uint8_t num2, FlagRegister& fr);
-Instruction ADD_8_reg(uint8_t& num1, uint8_t& num2, FlagRegister& fr);
-Instruction ADD_8_mem(uint8_t& num1, MMU& mmu, uint16_t addr, FlagRegister& fr);
-Instruction ADD_8_imm(uint8_t& num1, uint8_t num2, bool carry, FlagRegister& fr);
-Instruction ADC_8_reg(uint8_t& num1, uint8_t& num2, FlagRegister& fr);
-Instruction ADC_8_mem(uint8_t& num1, MMU& mmu, uint16_t addr, FlagRegister& fr);
-Instruction ADC_8_imm(uint8_t& num1, uint8_t num2, FlagRegister& fr);
-Instruction SUB_8_reg(uint8_t& num1, uint8_t& num2, FlagRegister& fr);
-Instruction SUB_8_mem(uint8_t& num1, MMU& mmu, uint16_t addr, FlagRegister& fr);
-Instruction SUB_8_imm(uint8_t& num1, uint8_t num2, FlagRegister& fr);
-Instruction SBB_8_reg(uint8_t& num1, uint8_t& num2, FlagRegister& fr);
-Instruction SBB_8_mem(uint8_t& num1, MMU& mmu, uint16_t addr, FlagRegister& fr);
-Instruction SBB_8_imm(uint8_t& num1, uint8_t num2, FlagRegister& fr);
-Instruction DEC_8(uint8_t& num, FlagRegister& fr);
-Instruction DEC_8_mem(MMU& mmu, uint16_t addr, FlagRegister& fr);
-Instruction DEC_16(uint8_t& hi, uint8_t& lo);  
+Instruction DEC_16(RegisterPair& hi, uint8_t& lo);  
+Instruction DEC_16(uint16_t& hi, uint8_t& lo);  
 
 //------------------LOGICAL------------------//
-Instruction AND_8_reg(uint8_t& num1, uint8_t& num2, FlagRegister& fr);
-Instruction AND_8_mem(uint8_t& num1, MMU& mmu, uint16_t addr, FlagRegister& fr);
-Instruction AND_8_imm(uint8_t& num1, uint8_t num2, FlagRegister& fr);
-
-Instruction OR_8_reg(uint8_t& num1, uint8_t& num2, FlagRegister& fr);
-Instruction OR_8_mem(uint8_t& num1, MMU& mmu, uint16_t addr, FlagRegister& fr);
-Instruction OR_8_imm(uint8_t& num1, uint8_t num2, FlagRegister& fr);
-Instruction XOR_8_reg(uint8_t& num1, uint8_t& num2, FlagRegister& fr);
-Instruction XOR_8_mem(uint8_t& num1, MMU& mmu, uint16_t addr, FlagRegister& fr);
-Instruction XOR_8_imm(uint8_t& num1, uint8_t num2, FlagRegister& fr);
-Instruction CP_8_reg(uint8_t& num1, uint8_t& num2, FlagRegister& fr);
-Instruction CP_8_mem(uint8_t& num1, MMU& mmu, uint16_t addr, FlagRegister& fr);
-Instruction CP_8_imm(uint8_t& num1, uint8_t num2, FlagRegister& fr);
+Instruction AND_8(Register& num1, const Register& num2, FlagRegister& fr);
+Instruction OR_8(Register& num1,  const Register& num2, FlagRegister& fr);
+Instruction XOR_8(Register& num1, const Register& num2, FlagRegister& fr);
+Instruction CP_8(Register& num1,  const Register& num2, FlagRegister& fr);
 }   //Operation
 
 #endif

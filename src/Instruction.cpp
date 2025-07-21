@@ -57,28 +57,10 @@ namespace Operation {
     
     } //Primitive
 
-Instruction LD_8_reg(uint8_t& dest, uint8_t& src) {
+Instruction LD_8(uint8_t& dest, uint8_t& src) {
     return Instruction { 
         [&](){Primitive::load_8_bit(dest,src);},
         1, 4
-    };
-}
-Instruction LD_8_mem_r(MMU& mmu, uint16_t addr, uint8_t& src) {
-    return Instruction {
-        [&](){mmu.write(addr, src);},
-        1, 8
-    };
-}
-Instruction LD_8_r_mem(uint8_t& dest, MMU& mmu, uint16_t addr) {
-    return Instruction {
-        [&](){dest = mmu.read(addr);},
-        1, 8
-    };
-}
-Instruction LD_8_imm(uint8_t& dest, uint8_t src) {
-    return Instruction {
-        [&](){ Primitive::load_8_bit(dest, src); },
-        2, 8
     };
 }
 Instruction LD_16(uint8_t& dest_hi, uint8_t& dest_lo, uint16_t src) {
