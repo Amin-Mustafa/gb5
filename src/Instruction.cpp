@@ -5,34 +5,24 @@
 
 namespace Operation {
 
-Instruction LD_8(Register& dest, Register& src) {
+Instruction LD_8(Register8& dest, const Register8& src) {
     return Instruction { 
-        [&](){dest.set( src.get() );},
-        1, 4
+        [&](){dest.set( src.get() );}
     };
 }
-Instruction LD_16(RegisterPair& dest, uint16_t src) {
+Instruction LD_16(Register16& dest, const Register16& src) {
     return Instruction {
-        [&]() {dest.set(src);}, 
-        3,12
+        [&](){dest.set( src.get() );}
     };
 }
-Instruction LD_16(uint16_t& dest, uint16_t src) {
-    return Instruction {
-        [&]() {dest = src;}, 
-        3,12
-    };
-}
-
 
 //------------------- ARITHMETIC -------------------//
-Instruction INC_16(RegisterPair& rp) {
+Instruction INC_16(Register16& rp) {
     return Instruction {
-        [&](){ rp.set(rp.get() + 1); }, 
-        1,8
+        [&](){ rp.set(rp.get() + 1); }
     };
 }
-Instruction INC_8(Register& num, FlagRegister& fr) {
+Instruction INC_8(Register8& num, FlagRegister& fr) {
     return Instruction{ 
         [&](){
             uint16_t result = num.get() + 1;
@@ -40,23 +30,23 @@ Instruction INC_8(Register& num, FlagRegister& fr) {
             fr.set_flag(Flag::NEGATIVE, 0);
             fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add(num.get(), 1));
             num.set(result&0xff);
-        },
-        1, 4
+        }
     };
 }
-Instruction ADD_16(RegisterPair& num1, uint16_t num2, FlagRegister& fr) {
+Instruction ADD_16(Register16& num1, const Register16& num2, FlagRegister& fr) {
     return Instruction{
         [&]() {
-            int result = num1.get() + num2;
+            uint16_t a = num1.get();
+            uint16_t b = num2.get();
+            int result = a + b;
             fr.set_flag(Flag::NEGATIVE, 0);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add(num1.get(), num2));
+            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add(a, b));
             fr.set_flag(Flag::CARRY, result > 0xffff);
             num1.set(result);
-        }, 
-        1,8
+        }
     };
 } 
-Instruction ADD_16_e8(RegisterPair& num1, uint8_t num2, FlagRegister& fr){
+Instruction ADD_16_e8(Register16& num1, uint8_t num2, FlagRegister& fr){
     return Instruction{
         [&](){
             int8_t addend = static_cast<int8_t>(num2);
@@ -69,66 +59,69 @@ Instruction ADD_16_e8(RegisterPair& num1, uint8_t num2, FlagRegister& fr){
             fr.set_flag(Flag::HALF_CARRY, hcarry );
             fr.set_flag(Flag::CARRY, carry);
             num1.set(result);
-        },
-        2,16
+        }
     };
 }
-Instruction ADD_8(Register& num1, uint8_t num2, FlagRegister& fr) {
+Instruction ADD_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
     return Instruction { 
         [&](){ 
-            uint16_t result = num1.get() + num2;
+            uint8_t a = num1.get();
+            uint8_t b = num2.get();
+            uint16_t result = a + b;
             fr.set_flag(Flag::ZERO, (result&0xff) == 0);
             fr.set_flag(Flag::NEGATIVE, 0);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add(num1.get(), num2));
+            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add(a, b));
             fr.set_flag(Flag::CARRY, result > 0xff);
             num1.set(result & 0xff);
-        },
-        1,4
+        }
     };
 }
-Instruction ADC_8(Register& num1, uint8_t& num2, FlagRegister& fr) {
+Instruction ADC_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
    return Instruction { 
         [&](){ 
             bool carry = fr.get_flag(Flag::CARRY);
-            uint16_t result = num1.get() + num2 + carry;
+            uint8_t a = num1.get();
+            uint8_t b = num2.get();
+            uint16_t result = a + b + carry;
             fr.set_flag(Flag::ZERO, (result&0xff) == 0);
             fr.set_flag(Flag::NEGATIVE, 0);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add(num1.get(), num2 + carry));
+            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add(a, b + carry));
             fr.set_flag(Flag::CARRY, result > 0xff);
             num1.set(result & 0xff);
-        },
-        1,4
+        }
     };
 }
 
-Instruction SUB_8(Register& num1, uint8_t& num2, FlagRegister& fr) {
+Instruction SUB_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
     return Instruction { 
         [&](){
-            uint16_t result = num1.get() - num2;
+            uint8_t a = num1.get();
+            uint8_t b = num2.get();
+            uint16_t result = a - b;
             fr.set_flag(Flag::ZERO, (result&0xff) == 0);
             fr.set_flag(Flag::NEGATIVE, 1);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub(num1.get(), num2));
-            fr.set_flag(Flag::CARRY, num2 > num1.get());
+            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub(a, b));
+            fr.set_flag(Flag::CARRY, b > a);
             num1.set(result & 0xff);
-        },
-        1,4 
+        }
     };
 }
-Instruction SBB_8(Register& num1, uint8_t& num2, FlagRegister& fr) {
+Instruction SBC_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
     return Instruction { 
         [&](){
+            uint8_t a = num1.get();
+            uint8_t b = num2.get();
             bool carry = fr.get_flag(Flag::CARRY);
-            uint16_t result = num1.get() - num2 - carry;
+            uint16_t result = a - b - carry;
             fr.set_flag(Flag::ZERO, (result&0xff) == 0);
             fr.set_flag(Flag::NEGATIVE, 1);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub(num1.get(), num2+carry));
-            fr.set_flag(Flag::CARRY, num2 + carry > num1.get());
+            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub(a, b+carry));
+            fr.set_flag(Flag::CARRY, b + carry > a);
             num1.set(result & 0xff);
-        },
-        1,4 
+        }
     };
 }
-Instruction DEC_8(Register& num, FlagRegister& fr){
+Instruction DEC_8(Register8& num, FlagRegister& fr){
     return Instruction{ 
         [&](){
             uint16_t result = num.get() - 1;
@@ -136,59 +129,55 @@ Instruction DEC_8(Register& num, FlagRegister& fr){
             fr.set_flag(Flag::NEGATIVE, 1);
             fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub(num.get(), 1));
             num.set(result&0xff);
-        },
-        1,4 
+        }
     };
 }
-Instruction DEC_16(RegisterPair& rp) {
+Instruction DEC_16(Register16& rp) {
     return Instruction{
         [&](){
             rp.set(rp.get() - 1);
-        }, 
-        1, 8
+        }
     };
 }      
 
 //------------------LOGICAL------------------//
-Instruction AND_8(Register& num1, uint8_t num2, FlagRegister& fr) {
+Instruction AND_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
     return Instruction{
         [&](){
-            num1.set(num1.get() & num2);
+            num1.set(num1.get() & num2.get());
             fr = flag_state(num1.get() == 0, 0, 1, 0);
-        },
-        1,4
+        }
     };
 }
-Instruction OR_8(Register& num1, uint8_t num2, FlagRegister& fr) {
+Instruction OR_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
     return Instruction{
         [&](){
-            num1.set(num1.get() | num2);
+            num1.set(num1.get() | num2.get());
             fr = flag_state(num1.get() == 0, 0, 0, 0);
-        },
-        1,4
+        }
     };
 }
 
-Instruction XOR_8(Register& num1, uint8_t num2, FlagRegister& fr) {
+Instruction XOR_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
     return Instruction{
         [&](){
-            num1.set(num1.get() ^ num2);
+            num1.set(num1.get() ^ num2.get());
             fr = flag_state(num1.get() == 0, 0, 0, 0);
-        },
-        1,4
+        }
     };
 }
-Instruction CP_8(Register& num1, uint8_t num2, FlagRegister& fr) {
+Instruction CP_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
     return Instruction { 
         [&](){
-            uint16_t result = num1.get() - num2;
+            uint8_t a = num1.get();
+            uint8_t b = num2.get();
+            uint16_t result = a - b;
             fr.set_flag(Flag::ZERO, (result&0xff) == 0);
             fr.set_flag(Flag::NEGATIVE, 1);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub(num1.get(), num2));
-            fr.set_flag(Flag::CARRY, num2 > num1.get());
-            //leave num1 unchanged
-        },
-        1,4 
+            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub(a, b));
+            fr.set_flag(Flag::CARRY, b > a);
+            //no set
+        } 
     };
 }
 }   //Operation

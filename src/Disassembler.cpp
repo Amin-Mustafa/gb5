@@ -79,7 +79,7 @@ void Disassembler::disassemble_at(uint16_t pos) {
 
         case 0x07: cout << "RLCA"; break;
 
-        case 0x08: cout << format("[${:02x}{:02x}], SP", BYTE2, BYTE1); break;
+        case 0x08: cout << format("LD [${:02x}{:02x}], SP", BYTE2, BYTE1); break;
         
         case 0x09: case 0x19: case 0x29: case 0x39:
             cout << format("ADD HL, {}", reg_pairs[opcode>>4]);

@@ -3,12 +3,13 @@
 
 #include <cstdint>
 #include <array>
+#include <memory>
 #include <string>
 #include "Register.h"
-#include "Instruction.h"
+#include "Decoder.h"
 
-class Instruction;
 class MMU;
+class Instruction;
 
 class CPU {
 public:
@@ -20,34 +21,28 @@ public:
     //flags
     FlagRegister F;
     //program counter and stack pointer
-    uint16_t pc;
-    uint16_t sp;
+    uint16_t pc;    
+    StackPointer sp;
     //Data registers
     DataRegister A, B, C, D, E, H, L;
     MemRegister M;
-    
-    int cycles;
-    bool int_enable;
 
     //memory
     MMU& memory;
-    uint8_t read_memory(uint16_t addr) {
-        cycles += 4;    //CPU memory access costs 4 cycles 
-        return memory.read(addr);
-     }
-    void write_memory(uint16_t addr, uint8_t val) { 
-        cycles += 4;   
-        memory.write(addr, val); 
-    }
+    uint8_t read_memory(uint16_t addr);
+    void write_memory(uint16_t addr, uint8_t val);
     
 private:
     using StateFunction = void (CPU::*)();  //pointer to state function
 
+    int cycles;
+    bool int_enable;
+
     //internal functions
-    Instruction decode(uint8_t opcode);
-    std::array<Instruction, 256> instruction_table;
-    void init_instruction_table();
-    //stack ops
+    std::unique_ptr<Decoder> decoder;
+    
+    void jump(uint16_t addr);
+    void pc_return();
     void push_to_stack(uint16_t num);
     void pop_from_stack(uint8_t& num_hi, uint8_t& num_lo);
     void pop_from_stack(uint16_t& num);
@@ -56,11 +51,14 @@ private:
     StateFunction current_state;
     void fetch_and_execute();
 
+public:
     //CPU-control opcodes
     Instruction JR(uint8_t offset, bool condition);
     Instruction JP(uint16_t destination, bool condition);
     Instruction CALL(uint16_t destination, bool condition);
-    Instruction RET(bool condition);
+    Instruction RET();
+    Instruction RETI();
+    Instruction RET_IF(bool condition);
     Instruction RST(uint8_t destination);
     Instruction PUSH(uint8_t num_hi, uint8_t num_lo);
     Instruction POP(uint8_t& num_hi, uint8_t& num_lo);

@@ -13,14 +13,14 @@ constexpr uint8_t flag_state(bool z, bool n, bool h, bool c) {
     return z << 7 | n << 6 | h << 5 | c << 4;
 }
 
-class Register {
+class Register8 {
 public:
     virtual uint8_t get() const = 0;
     virtual void set(uint8_t val) = 0;
-    virtual ~Register()=default;
+    virtual ~Register8()=default;
 };
 
-class DataRegister : public Register {
+class DataRegister : public Register8 {
 private: 
     uint8_t data;
 public: 
@@ -32,22 +32,34 @@ public:
         data = val;
         return *this;
     }
+    //treat a data register just like a number
+    operator uint8_t() const { return get(); } 
 };
 
-class MemRegister : public Register {
+class MemRegister : public Register8 {
 private: 
     CPU& cpu;
-    DataRegister& hi;
-    DataRegister& lo;
+    Register8& hi;
+    Register8& lo;
 public:    
-    MemRegister(CPU& cpu, DataRegister& high, DataRegister& low)    
+    MemRegister(CPU& cpu, Register8& high, Register8& low)    
         :cpu{cpu}, hi{high}, lo{low} {}
 
     uint8_t get() const override;
     void set(uint8_t val) override;
 };
 
-class FlagRegister : public Register {
+class Immediate8 : public Register8 {
+private: 
+    CPU& cpu;
+public:    
+    Immediate8(CPU& cpu) :cpu{cpu} {}
+
+    uint8_t get() const override;
+    void set(uint8_t) {/* nothing */}; //cannot set immediate value
+};
+
+class FlagRegister : public Register8 {
 private:
     uint8_t reg;
 public:
@@ -68,14 +80,21 @@ public:
     }
 };
 
-class RegisterPair {
+class Register16 {
+public:
+    virtual uint16_t get() const = 0;
+    virtual void set(uint16_t val) = 0;
+    virtual ~Register16()=default;
+};
+
+class RegisterPair : public Register16 {
 private: 
-    DataRegister& hi;
-    DataRegister& lo;
+    Register8& hi;
+    Register8& lo;
 public: 
-    RegisterPair(DataRegister& high, DataRegister& low) 
+    RegisterPair(Register8& high, Register8& low) 
         :hi{high}, lo{low} {}
-        
+
     uint16_t get() const {
         return ( static_cast<uint16_t>(hi.get()) << 8 ) | lo.get();
     }       
@@ -83,7 +102,29 @@ public:
         hi.set(val >> 8);
         lo.set(val & 0xff);
     }
-    
+};
+
+class Immediate16 : public Register16 {
+private: 
+    CPU& cpu;
+public:    
+    Immediate16(CPU& cpu) :cpu{cpu} {}
+    uint16_t get() const;
+    void set(uint16_t) {/* nothing */};
+};
+
+class StackPointer : public Register16 {
+private:
+    uint16_t val;
+public:
+    StackPointer(uint16_t num) : val{num} {}
+    uint16_t get() const {return val;}
+    void set(uint16_t num) {val = num;}
+    StackPointer& operator=(uint16_t num) {
+        set(num);
+        return *this;
+    }
+    operator uint8_t() const { return get(); } 
 };
 
 #endif

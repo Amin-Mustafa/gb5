@@ -25,10 +25,11 @@ int main() {
     CPU cpu(mem);
     Disassembler dis(mem);
 
-    rom.load("ROM/09-op r,r.gb");
+    rom.load("ROM/test.gb");
     while(true) {
         dis.disassemble_at(cpu.pc);
         cpu.print_state();
         cpu.tick();
+        std::cin.get();
     }
 }
