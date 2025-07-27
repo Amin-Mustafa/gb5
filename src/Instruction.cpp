@@ -5,6 +5,10 @@
 
 namespace Operation {
 
+Instruction NOP() {
+    return Instruction{};
+}
+
 Instruction LD_8(Register8& dest, const Register8& src) {
     return Instruction { 
         [&](){dest.set( src.get() );}
@@ -43,24 +47,29 @@ Instruction ADD_16(Register16& num1, const Register16& num2, FlagRegister& fr) {
             fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add(a, b));
             fr.set_flag(Flag::CARRY, result > 0xffff);
             num1.set(result);
-        }
+        },
+        4   
     };
 } 
-Instruction ADD_16_e8(Register16& num1, uint8_t num2, FlagRegister& fr){
+Instruction ADD_SP_e8(StackPointer& num1, const Immediate8& num2, FlagRegister& fr){
     return Instruction{
         [&](){
-            int8_t addend = static_cast<int8_t>(num2);
-            uint16_t result = num1.get() + addend;
-            bool hcarry = addend >= 0 ? Arithmetic::half_carry_add(num1.get(), addend) : 
-                                    Arithmetic::half_carry_sub(num1.get(), addend);
-            bool carry = addend >= 0 ? result > 0xffff : addend > num1.get();
+            uint8_t a = num1.get();
+            int8_t b = static_cast<int8_t>(num2.get());
+            uint16_t result = a + b;
+            bool hcarry = b >= 0 ? Arithmetic::half_carry_add(a, b) : 
+                                    Arithmetic::half_carry_sub(a, b);
+            bool carry = b >= 0 ? result > 0xffff : b > a;
             fr.set_flag(Flag::ZERO, 0);
             fr.set_flag(Flag::NEGATIVE, 0);
             fr.set_flag(Flag::HALF_CARRY, hcarry );
             fr.set_flag(Flag::CARRY, carry);
             num1.set(result);
-        }
+        },
+        8  
     };
+    //initial fetch (4) + operand fetch (4) + 16-bit add (4) + stack modification (4)
+    //Total cycles: 16
 }
 Instruction ADD_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
     return Instruction { 
@@ -138,7 +147,78 @@ Instruction DEC_16(Register16& rp) {
             rp.set(rp.get() - 1);
         }
     };
-}      
+}     
+Instruction RLC_8(Register8& num, FlagRegister& fr){
+    return Instruction{
+        [&]() {
+            bool carry = fr.get_flag(Flag::CARRY);
+            uint8_t result = Arithmetic::rot_left_circ(num.get(), carry);
+            fr.set(flag_state(!result, 0, 0, carry));
+            num.set(result);
+        }
+    };
+}
+Instruction RRC_8(Register8& num, FlagRegister& fr){ 
+    return Instruction{
+        [&]() {
+            bool carry = fr.get_flag(Flag::CARRY);
+            uint8_t result = Arithmetic::rot_right_circ(num.get(), carry);
+            fr.set(flag_state(!result, 0, 0, carry));
+            num.set(result);
+        }
+    };
+}
+Instruction RL_8(Register8& num, FlagRegister& fr) {
+    return Instruction{
+        [&]() {
+            bool carry = fr.get_flag(Flag::CARRY);
+            uint8_t result = Arithmetic::rot_left(num.get(), carry);
+            fr.set(flag_state(!result, 0, 0, carry));
+            num.set(result);
+        }
+    };
+}
+Instruction RR_8(Register8& num, FlagRegister& fr) {
+    return Instruction{
+        [&]() {
+            bool carry = fr.get_flag(Flag::CARRY);
+            uint8_t result = Arithmetic::rot_right(num.get(), carry);
+            fr.set(flag_state(!result, 0, 0, carry));
+            num.set(result);
+        }
+    };
+}
+Instruction SLA_8(Register8& num, FlagRegister& fr) {
+    return Instruction{
+        [&]() {
+            bool carry = fr.get_flag(Flag::CARRY);
+            uint8_t result = Arithmetic::shift_left_arithmetic(num.get(), carry);
+            fr.set(flag_state(!result, 0, 0, carry));
+            num.set(result);
+        }
+    };
+}
+Instruction SRA_8(Register8& num, FlagRegister& fr){ 
+    return Instruction{
+        [&]() {
+            bool carry = fr.get_flag(Flag::CARRY);
+            uint8_t result = Arithmetic::shift_right_arithmetic(num.get(), carry);
+            fr.set(flag_state(!result, 0, 0, carry));
+            num.set(result);
+        }
+    };
+}
+Instruction SRL_8(Register8& num, FlagRegister& fr) {
+    return Instruction{
+        [&]() {
+            bool carry = fr.get_flag(Flag::CARRY);
+            uint8_t result = Arithmetic::shift_right_logical(num.get(), carry);
+            fr.set(flag_state(!result, 0, 0, carry));
+            num.set(result);
+        }
+    };
+}
+
 
 //------------------LOGICAL------------------//
 Instruction AND_8(Register8& num1, const Register8& num2, FlagRegister& fr) {

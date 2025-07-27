@@ -59,6 +59,15 @@ public:
     void set(uint8_t) {/* nothing */}; //cannot set immediate value
 };
 
+class HighMemory : public Register8 {
+private:
+    CPU& cpu;
+public:
+    HighMemory(CPU& cpu) :cpu{cpu} {}
+    uint8_t get() const override;
+    void set(uint8_t);
+};
+
 class FlagRegister : public Register8 {
 private:
     uint8_t reg;

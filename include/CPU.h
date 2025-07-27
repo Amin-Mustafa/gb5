@@ -53,15 +53,16 @@ private:
 
 public:
     //CPU-control opcodes
-    Instruction JR(uint8_t offset, bool condition);
-    Instruction JP(uint16_t destination, bool condition);
-    Instruction CALL(uint16_t destination, bool condition);
+    Instruction JR(const Register8& offset, bool condition = true);
+    Instruction JP(const Register16& destination, bool condition = true);
+    Instruction JPHL();
+    Instruction CALL(const Register16& destination, bool condition = true);
     Instruction RET();
     Instruction RETI();
     Instruction RET_IF(bool condition);
     Instruction RST(uint8_t destination);
-    Instruction PUSH(uint8_t num_hi, uint8_t num_lo);
-    Instruction POP(uint8_t& num_hi, uint8_t& num_lo);
+    Instruction PUSH(RegisterPair& rp);
+    Instruction POP(RegisterPair& rp);
     Instruction DI();
     Instruction EI();
 };

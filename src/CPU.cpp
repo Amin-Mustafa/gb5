@@ -23,7 +23,7 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
 }
 
 CPU::CPU(MMU& memory):
-    F{0x80}, pc{0x100}, sp{0xFFFE},
+    F{0x80}, pc{0xFA}, sp{0xFFFE},
     A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, 
     M{*this, H, L}, memory{memory}, current_state{&fetch_and_execute},
     decoder{new Decoder(*this)} {}
@@ -57,14 +57,14 @@ void CPU::push_to_stack(uint16_t num) {
     write_memory(sp-1, num >> 8);
 	write_memory(sp-2, num & 0xff);
 	sp.set(sp-2);
-    cycles += 4; //decrementing sp costs 4 cycles
+    cycles += 4; //pushing costs 4 cycles
     //total cycle cost = 12
 }
 
 void CPU::pop_from_stack(uint8_t& num_hi, uint8_t& num_lo) {
     num_lo = read_memory(sp);
     num_hi = read_memory(sp+1);
-    sp.set(sp+2); //incrementing sp costs nothing
+    sp.set(sp+2); //popping costs nothing
     //total cycle cost = 8
 }
 void CPU::pop_from_stack(uint16_t& num) {
@@ -73,11 +73,11 @@ void CPU::pop_from_stack(uint16_t& num) {
 }
 
 //internal CPU operations
-Instruction CPU::JR(uint8_t offset, bool condition) {
+Instruction CPU::JR(const Register8& offset, bool condition) {
     if(condition) {
         return Instruction{
             [&](){ 
-                pc += (int8_t)offset;
+                pc += (int8_t)offset.get();
                 cycles += 4; //jump base cost = 4
             }
             //total cost = inst fetch (4) + operand fetch (4) + jump base cost (4)
@@ -86,34 +86,42 @@ Instruction CPU::JR(uint8_t offset, bool condition) {
     }
     else return Instruction(); 
 }
-Instruction CPU::JP(uint16_t destination, bool condition) {
+Instruction CPU::JP(const Register16& destination, bool condition) {
     if(condition) {
-        return Instruction{ [&](){ jump(destination);} };
+        uint16_t addr = destination.get();
+        return Instruction{ [&](){ jump(addr - 1);} };
     }
     return Instruction();
 }
-Instruction CPU::CALL(uint16_t destination, bool condition) {
+Instruction CPU::JPHL() {
+    //special instruction; this particular jump takes no cycles
+    return Instruction { [&](){ pc = pair(H,L); } };
+}
+Instruction CPU::CALL(const Register16& destination, bool condition) {
     if(condition) {
         return Instruction{
             [&]() {
+                uint16_t addr = destination.get();
                 push_to_stack(pc+2);
-                jump(destination-3);
+                jump(addr - 1);
             }
         };
     }
     else return Instruction();
 }
-Instruction CPU::PUSH(uint8_t num_hi, uint8_t num_lo) {
+Instruction CPU::PUSH(RegisterPair& rp) {
     return Instruction {
         [&](){
-            push_to_stack(pair(num_hi, num_lo)); 
+            push_to_stack(rp.get()); 
         }
     };
 }
-Instruction CPU::POP(uint8_t& num_hi, uint8_t& num_lo) {
+Instruction CPU::POP(RegisterPair& rp) {
     return Instruction {
         [&](){
-            pop_from_stack(num_hi, num_lo);
+            uint16_t num = rp.get();
+            pop_from_stack(num);
+            rp.set(num);
         }
     };
 }
@@ -134,8 +142,8 @@ Instruction CPU::RET_IF(bool condition) {
         return Instruction{
             [&](){
                 pc_return();
-                cycles += 4;    
-            }
+            },
+            4
     };
     }
     else return Instruction{[&](){cycles += 4;}};
@@ -147,8 +155,8 @@ Instruction CPU::RST(uint8_t destination) {
             //its only advantage over JP is only needing one byte rather than 3
             //so it can be used in interrupts
             pc = destination;
-            cycles += 16;  
-        }
+        },
+        16
     };
 }
 Instruction CPU::DI(){
