@@ -25,7 +25,7 @@ Decoder::Decoder(CPU& cpu)
     HL{RegisterPair{cpu.H, cpu.L}},
     AF{RegisterPair{cpu.A, cpu.F}},
     BC_mem{MemRegister{cpu, cpu.B, cpu.C}},
-    DE_mem{MemRegister{cpu, cpu.B, cpu.C}},
+    DE_mem{MemRegister{cpu, cpu.D, cpu.E}},
     imm8{Immediate8(cpu)},
     imm16{Immediate16(cpu)},
     h_mem{HighMemory(cpu)}

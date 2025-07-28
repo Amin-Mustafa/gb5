@@ -130,6 +130,7 @@ private:
     uint16_t val;
 public:
     StackPointer(uint16_t num) : val{num} {}
+    
     uint16_t get() const {return val;}
     void set(uint16_t num) {val = num;}
     StackPointer& operator=(uint16_t num) {

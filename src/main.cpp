@@ -12,6 +12,7 @@ void dbg_out(SerialPort* sp) {
     for(const auto& c : sp->destination_buffer) {
         std::cout << (char)c;
     }
+    std::cout << '\n';
 }
 
 int main() {
@@ -21,8 +22,6 @@ int main() {
     SerialPort sp(mem);
     CPU cpu(mem);
     Disassembler dis(mem);
-
-    cpu.pc = 0x209;
 
     rom.load("ROM/09-op r,r.gb");
     while(true) {

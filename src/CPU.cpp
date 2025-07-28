@@ -54,22 +54,25 @@ void CPU::pc_return() {
 }
 
 void CPU::push_to_stack(uint16_t num) {
-    write_memory(sp-1, num >> 8);
-	write_memory(sp-2, num & 0xff);
-	sp.set(sp-2);
+    uint16_t sp_val = sp.get();
+    write_memory(sp_val - 1, num >> 8);
+	write_memory(sp_val -2, num & 0xff);
+	sp.set(sp_val - 2);
     cycles += 4; //pushing costs 4 cycles
     //total cycle cost = 12
 }
 
 void CPU::pop_from_stack(uint8_t& num_hi, uint8_t& num_lo) {
-    num_lo = read_memory(sp);
-    num_hi = read_memory(sp+1);
-    sp.set(sp+2); //popping costs nothing
+    uint16_t sp_val = sp.get();
+    num_lo = read_memory(sp_val);
+    num_hi = read_memory(sp_val + 1);
+    sp.set(sp_val + 2); //popping costs nothing
     //total cycle cost = 8
 }
 void CPU::pop_from_stack(uint16_t& num) {
-    num = pair(read_memory(sp+1), read_memory(sp));
-    sp.set(sp+2);
+    uint16_t sp_val = sp.get();
+    num = pair(read_memory(sp_val + 1), read_memory(sp_val));
+    sp.set(sp_val + 2);
 }
 
 //internal CPU operations
@@ -166,7 +169,7 @@ void CPU::print_state(){
     std::cout << 
         std::format("A:{:02x}, B:{:02x}, C:{:02x}, D:{:02x}, E:{:02x}, H:{:02x}, L:{:02x}, ",
                     A.get(), B.get(), C.get(), D.get(), E.get(), H.get(), L.get()) <<
-        std::format("[HL]:{:02x}, ", memory.read(pair(H, L))) <<
+        std::format("[HL]:{:02x}, [DE]:{:02x}, ", memory.read(pair(H, L)), memory.read(pair(D,E))) <<
         std::format("PC:{:04x}, SP:{:04x}, F:{:d}{:d}{:d}{:d}\n", pc, sp.get(), F.get_flag(Flag::ZERO),
                     F.get_flag(Flag::NEGATIVE), F.get_flag(Flag::HALF_CARRY), F.get_flag(Flag::CARRY));
 }
