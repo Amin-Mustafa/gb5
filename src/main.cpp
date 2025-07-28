@@ -2,33 +2,33 @@
 #include "../include/ROM.h"
 #include "../include/MemoryContainer.h"
 #include "../include/Register.h"
+#include "../include/SerialPort.h"
 
 #include "../include/CPU.h"
 #include "../include/Disassembler.h"
 #include <iostream>
 
-uint16_t pair(uint8_t hi, uint8_t lo) {
-    return hi << 8 | lo;
-}
-
-void print_flags(const FlagRegister& fr) {
-    std::cout << fr.get_flag(Flag::ZERO)
-              << fr.get_flag(Flag::NEGATIVE)
-              << fr.get_flag(Flag::HALF_CARRY)
-              << fr.get_flag(Flag::CARRY);
+void dbg_out(SerialPort* sp) {
+    for(const auto& c : sp->destination_buffer) {
+        std::cout << (char)c;
+    }
 }
 
 int main() {
     MMU mem;
     ROM rom(mem);
     MemoryContainer ram(0x8000, 0xFFFF, mem);
+    SerialPort sp(mem);
     CPU cpu(mem);
     Disassembler dis(mem);
 
-    rom.load("ROM/test.gb");
+    cpu.pc = 0x209;
+
+    rom.load("ROM/09-op r,r.gb");
     while(true) {
         dis.disassemble_at(cpu.pc);
         cpu.print_state();
+        dbg_out(&sp);
         cpu.tick();
         std::cin.get();
     }

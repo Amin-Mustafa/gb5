@@ -4,6 +4,8 @@
 #include <functional>
 #include <cstdint>
 
+class MMU;
+
 class MemoryRegion {
 private:
     uint16_t start_addr;
@@ -18,11 +20,7 @@ public:
     uint16_t start() const {return start_addr;}
     uint16_t end() const {return end_addr;}
 
-    MemoryRegion(uint16_t start, uint16_t end, ReadFunc read_func, WriteFunc write_func)
-        :start_addr{start}, end_addr{end}, data(end - start + 1) {
-            read = std::move(read_func);
-            write = std::move(write_func);
-        }
+    MemoryRegion(MMU& mem, uint16_t start, uint16_t end, ReadFunc read_func, WriteFunc write_func);
 };
 
 #endif

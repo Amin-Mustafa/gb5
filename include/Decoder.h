@@ -17,20 +17,16 @@ private:
     std::array<Instruction, 0x100> inst_table;
     void init_instruction_table();
 
-    RegisterPair BC;
-    RegisterPair DE;
-    RegisterPair HL;
-    RegisterPair AF;
+    std::vector<std::reference_wrapper<Register8>> regs;
+    std::vector<ALUOp> alu_ops;
 
-    MemRegister BC_mem;
-    MemRegister DE_mem;
+    RegisterPair BC, DE, HL, AF;
+
+    MemRegister BC_mem, DE_mem;
 
     Immediate8 imm8; 
     Immediate16 imm16; 
     HighMemory h_mem; 
-
-    std::vector<std::reference_wrapper<Register8>> regs;
-    std::vector<ALUOp> alu_ops;
 
 public: 
     Instruction decode(uint8_t opcode);

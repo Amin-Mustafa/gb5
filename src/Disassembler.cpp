@@ -18,7 +18,7 @@ void Disassembler::disassemble_at(uint16_t pos) {
     #define BYTE1 mem.read(pos+1)
     #define BYTE2 mem.read(pos+2)
 
-    cout << format("PC: ${:04x} 0x{:02x}\t", pos, opcode);
+    cout << format("${:04x} 0x{:02x}\t", pos, opcode);
 
     cout << std::left << std::setw(10);
 

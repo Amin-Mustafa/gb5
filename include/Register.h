@@ -2,6 +2,7 @@
 #define REGISTER_H
 
 #include <cstdint>
+#include <functional>
 
 class CPU;
 
@@ -72,6 +73,8 @@ class FlagRegister : public Register8 {
 private:
     uint8_t reg;
 public:
+    using ConditionCheck = bool (*)(const FlagRegister&);
+
     FlagRegister(const uint8_t& state):
         reg{state} {}
     

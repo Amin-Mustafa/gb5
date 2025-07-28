@@ -23,7 +23,7 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
 }
 
 CPU::CPU(MMU& memory):
-    F{0x80}, pc{0xFA}, sp{0xFFFE},
+    F{0x80}, pc{0x100}, sp{0xFFFE},
     A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, 
     M{*this, H, L}, memory{memory}, current_state{&fetch_and_execute},
     decoder{new Decoder(*this)} {}
@@ -73,52 +73,52 @@ void CPU::pop_from_stack(uint16_t& num) {
 }
 
 //internal CPU operations
-Instruction CPU::JR(const Register8& offset, bool condition) {
-    if(condition) {
-        return Instruction{
-            [&](){ 
-                pc += (int8_t)offset.get();
-                cycles += 4; //jump base cost = 4
+Instruction CPU::JR(const Register8& offset, FlagRegister::ConditionCheck cc) {
+    return Instruction {
+        [&offset, cc, this](){
+            int8_t increment = static_cast<int8_t>(offset.get());
+            if(cc(F)) {
+                pc += increment;
+                cycles += 4;    
             }
-            //total cost = inst fetch (4) + operand fetch (4) + jump base cost (4)
-            // =  12 cycles
-        };
-    }
-    else return Instruction(); 
+        }
+    };
+    //if condition, total cycles = initial fetch (4) + operand fetch (4) + jump (4) = 12
+    //else, no jump; cycles = 8
 }
-Instruction CPU::JP(const Register16& destination, bool condition) {
-    if(condition) {
-        uint16_t addr = destination.get();
-        return Instruction{ [&](){ jump(addr - 1);} };
-    }
-    return Instruction();
+Instruction CPU::JP(const Register16& destination, FlagRegister::ConditionCheck cc) {
+    return Instruction {
+        [&destination, cc, this](){
+            uint16_t addr = destination.get();
+            if(cc(F)) jump(addr - 1);
+        }
+    };
 }
 Instruction CPU::JPHL() {
     //special instruction; this particular jump takes no cycles
-    return Instruction { [&](){ pc = pair(H,L); } };
+    return Instruction { [this](){ pc = pair(H,L); } };
 }
-Instruction CPU::CALL(const Register16& destination, bool condition) {
-    if(condition) {
-        return Instruction{
-            [&]() {
-                uint16_t addr = destination.get();
-                push_to_stack(pc+2);
+Instruction CPU::CALL(const Register16& destination, FlagRegister::ConditionCheck cc) {
+    return Instruction{
+        [&destination, cc, this](){
+            uint16_t addr = destination.get();
+            if(cc(F)) {
+                push_to_stack(pc);
                 jump(addr - 1);
             }
-        };
-    }
-    else return Instruction();
+        }
+    };
 }
 Instruction CPU::PUSH(RegisterPair& rp) {
     return Instruction {
-        [&](){
+        [&rp, this](){
             push_to_stack(rp.get()); 
         }
     };
 }
 Instruction CPU::POP(RegisterPair& rp) {
     return Instruction {
-        [&](){
+        [&rp, this](){
             uint16_t num = rp.get();
             pop_from_stack(num);
             rp.set(num);
@@ -136,21 +136,17 @@ Instruction CPU::RETI() {
         }
     };
 }
-Instruction CPU::RET_IF(bool condition) {
-    //conditional return has an extra 4 cycle cost for hardware reasons
-    if(condition) {
-        return Instruction{
-            [&](){
-                pc_return();
-            },
-            4
+Instruction CPU::RET_IF(FlagRegister::ConditionCheck cc) {
+    return Instruction {
+        [cc, this]() {
+            cycles += 4;    //condition check cost
+            if(cc(F)) pc_return();
+        }
     };
-    }
-    else return Instruction{[&](){cycles += 4;}};
 }
 Instruction CPU::RST(uint8_t destination) {
     return Instruction{
-        [&](){
+        [destination, this](){
             //an RST is a special kind of jump that takes 16 cycles rather than 4
             //its only advantage over JP is only needing one byte rather than 3
             //so it can be used in interrupts
