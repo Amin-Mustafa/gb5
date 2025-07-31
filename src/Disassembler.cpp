@@ -136,6 +136,10 @@ void Disassembler::disassemble_at(uint16_t pos) {
         case 0xCF: case 0xDF: case 0xEF: case 0xFF:
             cout << format("RST ${:02x}", opcode - 0xC7);
             break;
+
+        case 0xCB: 
+            disassemble_prefix_op(BYTE1);
+            break;
         
         case 0xE0: cout << format("LDH  [${:02x}], A", BYTE1);    break;
         case 0xE2: cout << format("LDH [C], A");    break;
@@ -159,4 +163,22 @@ void Disassembler::disassemble_at(uint16_t pos) {
 
     #undef BYTE2
     #undef BYTE1
+}
+
+void Disassembler::disassemble_prefix_op(uint8_t opcode) {
+    static std::string registers[] = {"B", "C", "D", "E", "H", "L", "[HL]", "A"};
+    static std::string shift_ops[] = {"RLC", "RRC", "RL", "RR", "SLA", "SRA", "SWAP"};
+
+    if(opcode >= 0x00 && opcode <= 0x3F) {
+        std::cout << std::format("{} {}", shift_ops[opcode / 8], registers[opcode % 8]);
+    }
+    if(opcode >= 0x40 && opcode <= 0x7F) {
+        std::cout << std::format("BIT {} {}", (opcode - 0x40) / 8, opcode % 8);
+    }
+    if(opcode >= 0x80 && opcode <= 0xBF) {
+        std::cout << std::format("RES {} {}", (opcode - 0x40) / 8, opcode % 8);
+    }
+    if(opcode >= 0xC0 && opcode <= 0xFF) {
+        std::cout << std::format("SET {} {}", (opcode - 0x40) / 8, opcode % 8);
+    }
 }
