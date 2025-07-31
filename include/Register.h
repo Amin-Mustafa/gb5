@@ -133,11 +133,6 @@ public:
     
     uint16_t get() const {return val;}
     void set(uint16_t num) {val = num;}
-    StackPointer& operator=(uint16_t num) {
-        set(num);
-        return *this;
-    }
-    operator uint8_t() const { return get(); } 
 };
 
 #endif

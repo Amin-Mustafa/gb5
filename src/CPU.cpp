@@ -123,7 +123,7 @@ Instruction CPU::PUSH(RegisterPair& rp) {
 Instruction CPU::POP(RegisterPair& rp) {
     return Instruction {
         [&rp, this](){
-            uint16_t num = rp.get();
+            uint16_t num;
             pop_from_stack(num);
             rp.set(num);
         }

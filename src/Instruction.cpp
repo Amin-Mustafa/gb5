@@ -54,20 +54,23 @@ Instruction ADD_16(Register16& num1, const Register16& num2, FlagRegister& fr) {
 } 
 Instruction ADD_SP_e8(StackPointer& sp, const Immediate8& num2, FlagRegister& fr){
     return Instruction{
-        [&](){
+        [&]() {
             uint16_t a = sp.get();
-            int8_t b = static_cast<int8_t>(num2.get());
-            uint16_t result = a + b;
-            bool hcarry = b >= 0 ? Arithmetic::half_carry_add_16(a, b) : 
-                                    Arithmetic::half_carry_sub_16(a, b);
-            bool carry = b >= 0 ? result > 0xffff : b > a;
+            uint8_t ue = num2.get();    //"raw" unsigned num2
+            int8_t e = static_cast<int8_t>(ue); // signed displacement
+            uint16_t result = a + e; 
+
+            bool half_carry = ((a & 0xF) + (ue & 0xF)) > 0xF;
+            bool carry = ((a & 0xFF) + ue) > 0xFF;
+
             fr.set_flag(Flag::ZERO, 0);
             fr.set_flag(Flag::NEGATIVE, 0);
-            fr.set_flag(Flag::HALF_CARRY, hcarry );
+            fr.set_flag(Flag::HALF_CARRY, half_carry);
             fr.set_flag(Flag::CARRY, carry);
+
             sp.set(result);
         },
-        8  
+        8
     };
     //initial fetch (4) + operand fetch (4) + 16-bit add (4) + stack modification (4)
     //Total cycles: 16

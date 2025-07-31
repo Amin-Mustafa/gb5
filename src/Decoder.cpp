@@ -60,9 +60,13 @@ void Decoder::init_instruction_table() {
     inst_table[0x08] = Instruction {
         [&]() {
             uint16_t addr = imm16.get();
-            cpu.write_memory(addr, cpu.sp & 0xff);
-            cpu.write_memory(addr + 1, cpu.sp >> 8);
+            uint16_t sp_val = cpu.sp.get();
+            cpu.write_memory(addr, sp_val & 0xff);  //write LSB
+            addr++;
+            cpu.write_memory(addr, sp_val >> 8);    //write MSB
         }
+        //cycles: initial fetch (4) + 2 operand fetches (8) + 2 memory writes (8)
+        //total = 20
     };
     inst_table[0x09] = ADD_16(HL, BC, cpu.F);
     inst_table[0x0A] = LD_8(cpu.A, BC_mem);
@@ -272,7 +276,7 @@ void Decoder::init_instruction_table() {
         [&](){
             StackPointer temp = cpu.sp;
             ADD_SP_e8(temp, imm8, cpu.F).execute();
-            HL.set(temp);
+            HL.set(temp.get());
         }, 
         -4  //this operation takes 4 fewer cycles than ADD SP+e8 for some reason
     };
