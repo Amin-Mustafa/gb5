@@ -12,13 +12,17 @@ class CPU;
 
 class Decoder {
 private:
-    typedef std::function<Instruction(Register8&, const Register8&, FlagRegister&)> ALUOp;
+    typedef Instruction (*ALUOp)(Register8&, const Register8&, FlagRegister&);
+    typedef Instruction (*ShiftOp)(Register8&, FlagRegister&);
     CPU& cpu;
     std::array<Instruction, 0x100> inst_table;
+    std::array<Instruction, 0x100> cb_table;
     void init_instruction_table();
+    void init_cb_table();
 
     std::vector<std::reference_wrapper<Register8>> regs;
     std::vector<ALUOp> alu_ops;
+    std::vector<ShiftOp> shift_ops;
 
     RegisterPair BC, DE, HL, AF;
 

@@ -4,20 +4,20 @@
 #include <cstdint>
 
 namespace Arithmetic {
-inline bool half_carry_add(uint8_t num1, uint8_t num2) {
-    return (((num1 & 0x0F) + (num2 & 0x0F)) & 0x10) == 0x10;
+inline bool half_carry_add_8(uint8_t a, uint8_t b) {
+    return ((a & 0xF) + (b & 0xF)) & 0x10;
 }
 
-inline bool half_carry_add(uint16_t num1, uint16_t num2) {
-    return (((num1 & 0x00FF) + (num2 & 0x00FF)) & 0x0100) == 0x0100;
+inline bool half_carry_add_16(uint16_t a, uint16_t b) {
+    return ((a & 0x0FFF) + (b & 0x0FFF)) & 0x1000;
 }
 
-inline bool half_carry_sub(uint8_t num1, uint8_t num2) {
-    return (int)(num1 & 0x0F) - (int)(num2 & 0x0F) < 0;
+inline bool half_carry_sub_8(uint8_t a, uint8_t b) {
+    return (a & 0xF) < (b & 0xF);
 }
 
-inline bool half_carry_sub(uint16_t num1, uint16_t num2) {
-    return (int)(num1 & 0x00FF) - (int)(num2 & 0x00FF) < 0;
+inline bool half_carry_sub_16(uint16_t a, uint16_t b) {
+    return (a & 0x0FFF) < (b & 0x0FFF);
 }
 
 inline uint16_t pair(uint8_t hi, uint8_t lo) {
@@ -53,6 +53,18 @@ inline uint8_t shift_right_arithmetic(uint8_t num, bool& carry) {
 inline uint8_t shift_right_logical(uint8_t num, bool& carry){
     carry = num & 1;
     return num >> 1;
+}
+inline uint8_t swap_nibs(uint8_t num){
+    return ( (num & 0x0F) << 4 | (num & 0xF0) >> 4 );
+}
+inline uint8_t bit_set(uint8_t num, uint8_t bit) {
+    return num | ((uint8_t)1 << bit);
+}
+inline uint8_t bit_clear(uint8_t num, uint8_t bit) {
+    return num & ~((uint8_t)1 << bit);
+}
+inline bool bit_check(uint8_t num, uint8_t bit) {
+    return (num >> bit) & (uint8_t)1;
 }
 }
 

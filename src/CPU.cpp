@@ -23,7 +23,7 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
 }
 
 CPU::CPU(MMU& memory):
-    F{0x80}, pc{0x100}, sp{0xFFFE},
+    F{0xB0}, pc{0x100}, sp{0xFFFE},
     A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, 
     M{*this, H, L}, memory{memory}, current_state{&fetch_and_execute},
     decoder{new Decoder(*this)} {}
@@ -50,6 +50,7 @@ void CPU::jump(uint16_t addr) {
 
 void CPU::pc_return() {
     pop_from_stack(pc);
+    pc--;
     cycles += 4;    //cost of jump
 }
 
@@ -99,14 +100,14 @@ Instruction CPU::JP(const Register16& destination, FlagRegister::ConditionCheck 
 }
 Instruction CPU::JPHL() {
     //special instruction; this particular jump takes no cycles
-    return Instruction { [this](){ pc = pair(H,L); } };
+    return Instruction { [this](){ pc = pair(H,L) - 1; } };
 }
 Instruction CPU::CALL(const Register16& destination, FlagRegister::ConditionCheck cc) {
     return Instruction{
         [&destination, cc, this](){
             uint16_t addr = destination.get();
             if(cc(F)) {
-                push_to_stack(pc);
+                push_to_stack(pc+1);
                 jump(addr - 1);
             }
         }
@@ -172,4 +173,17 @@ void CPU::print_state(){
         std::format("[HL]:{:02x}, [DE]:{:02x}, ", memory.read(pair(H, L)), memory.read(pair(D,E))) <<
         std::format("PC:{:04x}, SP:{:04x}, F:{:d}{:d}{:d}{:d}\n", pc, sp.get(), F.get_flag(Flag::ZERO),
                     F.get_flag(Flag::NEGATIVE), F.get_flag(Flag::HALF_CARRY), F.get_flag(Flag::CARRY));
+}
+
+void CPU::log_state(std::ostream& stream) {
+    stream << 
+        std::format(
+            "A: {:02X} F: {:02X} B: {:02X} C: {:02X} D: {:02X} E: {:02X} H: {:02X} L: {:02X} ",
+            A.get(), F.get(), B.get(), C.get(), D.get(), E.get(), H.get(), L.get()
+            ) 
+        <<
+        std::format(
+            "SP: {:04X} PC: 00:{:04X} ({:02X} {:02X} {:02X} {:02X})\n", sp.get(), pc,
+            memory.read(pc), memory.read(pc+1), memory.read(pc+2), memory.read(pc+3)
+            );
 }

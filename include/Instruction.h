@@ -42,13 +42,6 @@ Instruction ADC_8(Register8& num1, const Register8& num2, FlagRegister& fr);
 Instruction SUB_8(Register8& num1, const Register8& num2, FlagRegister& fr);
 Instruction SBC_8(Register8& num1, const Register8& num2, FlagRegister& fr);
 Instruction DEC_8(Register8& num, FlagRegister& fr);
-Instruction RLC_8(Register8& num, FlagRegister& fr);
-Instruction RRC_8(Register8& num, FlagRegister& fr);
-Instruction RL_8(Register8& num, FlagRegister& fr);
-Instruction RR_8(Register8& num, FlagRegister& fr);
-Instruction SLA_8(Register8& num, FlagRegister& fr);
-Instruction SRA_8(Register8& num, FlagRegister& fr);
-Instruction SRL_8(Register8& num, FlagRegister& fr);
 //16-bit
 Instruction INC_16(Register16& num);
 Instruction ADD_16(Register16& num, const Register16& num2, FlagRegister& fr);
@@ -60,6 +53,19 @@ Instruction AND_8(Register8& num1, const Register8& num2, FlagRegister& fr);
 Instruction OR_8 (Register8& num1, const Register8& num2, FlagRegister& fr);
 Instruction XOR_8(Register8& num1, const Register8& num2, FlagRegister& fr);
 Instruction CP_8 (Register8& num1, const Register8& num2, FlagRegister& fr);
+
+//-----------------PREFIX OPS-----------------//
+Instruction RLC(Register8& num, FlagRegister& fr);
+Instruction RRC(Register8& num, FlagRegister& fr);
+Instruction RL(Register8& num, FlagRegister& fr);
+Instruction RR(Register8& num, FlagRegister& fr);
+Instruction SLA(Register8& num, FlagRegister& fr);
+Instruction SRA(Register8& num, FlagRegister& fr);
+Instruction SRL(Register8& num, FlagRegister& fr);
+Instruction SWAP(Register8& num, FlagRegister& fr);
+Instruction BIT(Register8& num, uint8_t bit, FlagRegister& fr);
+Instruction RES(Register8& num, uint8_t bit);
+Instruction SET(Register8& num, uint8_t bit);
 }   //Operation
 
 #endif

@@ -20,6 +20,9 @@ Decoder::Decoder(CPU& cpu)
     alu_ops {
         ADD_8, ADC_8, SUB_8, SBC_8, AND_8, XOR_8, OR_8, CP_8
     },
+    shift_ops {
+        RLC, RRC, RL, RR, SLA, SRA, SWAP, SRL
+    },
     BC{RegisterPair{cpu.B, cpu.C}},
     DE{RegisterPair{cpu.D, cpu.E}},
     HL{RegisterPair{cpu.H, cpu.L}},
@@ -31,6 +34,7 @@ Decoder::Decoder(CPU& cpu)
     h_mem{HighMemory(cpu)}
     {
         init_instruction_table();
+        init_cb_table();
     }
 
 Instruction Decoder::decode(uint8_t opcode) {
@@ -49,7 +53,7 @@ void Decoder::init_instruction_table() {
     inst_table[0x06] = LD_8(cpu.B, imm8);
     inst_table[0x07] = Instruction {
         [&]() {
-            RLC_8(cpu.A, cpu.F).execute();
+            RLC(cpu.A, cpu.F).execute();
             cpu.F.set_flag(Flag::ZERO, 0);
         }
     };
@@ -68,7 +72,7 @@ void Decoder::init_instruction_table() {
     inst_table[0x0E] = LD_8(cpu.C, imm8);
     inst_table[0x0F] = Instruction {
         [&](){
-            RRC_8(cpu.A, cpu.F).execute();
+            RRC(cpu.A, cpu.F).execute();
             cpu.F.set_flag(Flag::ZERO, 0);
         }
     };
@@ -82,7 +86,7 @@ void Decoder::init_instruction_table() {
     inst_table[0x16] = LD_8(cpu.D, imm8);
     inst_table[0x17] = Instruction {
         [&]() {
-            RL_8(cpu.A, cpu.F).execute();
+            RL(cpu.A, cpu.F).execute();
             cpu.F.set_flag(Flag::ZERO, 0);
         }
     };
@@ -95,7 +99,7 @@ void Decoder::init_instruction_table() {
     inst_table[0x1E] = LD_8(cpu.E, imm8);
     inst_table[0x1F] = Instruction {
         [&](){
-            RR_8(cpu.A, cpu.F).execute();
+            RR(cpu.A, cpu.F).execute();
             cpu.F.set_flag(Flag::ZERO, 0);
         }
     };
@@ -189,7 +193,11 @@ void Decoder::init_instruction_table() {
     inst_table[0xC8] = cpu.RET_IF(Z);
     inst_table[0xC9] = cpu.RET();
     inst_table[0xCA] = cpu.JP(imm16, Z);
-    inst_table[0xCB] = NOP();  //TODO: PREFIX
+    inst_table[0xCB] = Instruction {
+        [this]() {
+            cb_table[Immediate8(cpu).get()].execute();
+        }
+    };
     inst_table[0xCC] = cpu.CALL(imm16, Z);
     inst_table[0xCD] = cpu.CALL(imm16);
     inst_table[0xCE] = ADC_8(cpu.A, imm8, cpu.F);
@@ -212,11 +220,16 @@ void Decoder::init_instruction_table() {
     inst_table[0xDE] = SBC_8(cpu.A, imm8, cpu.F);
     inst_table[0xDF] = cpu.RST(0x18);
 
-    inst_table[0xE0] = LD_8(h_mem, cpu.A);
+    inst_table[0xE0] = Instruction {
+        [&](){
+            cpu.write_memory(0xFF00 + cpu.read_memory(cpu.pc+1), cpu.A.get());
+            cpu.pc++;
+        }
+    };
     inst_table[0xE1] = cpu.POP(HL);
     inst_table[0xE2] = Instruction {
         [&](){
-            cpu.write_memory(0xFF00 + cpu.C, cpu.A);
+            cpu.write_memory(0xFF00 + cpu.C.get(), cpu.A.get());
         }
     };
     inst_table[0xE3] = NOP();
@@ -229,7 +242,7 @@ void Decoder::init_instruction_table() {
     inst_table[0xEA] = Instruction {
         [&](){
             uint16_t addr = imm16.get();
-            cpu.write_memory(addr, cpu.A);
+            cpu.write_memory(addr, cpu.A.get());
         }
     };
     inst_table[0xEB] = NOP();  
@@ -238,11 +251,16 @@ void Decoder::init_instruction_table() {
     inst_table[0xEE] = XOR_8(cpu.A, imm8, cpu.F);
     inst_table[0xEF] = cpu.RST(0x28);
 
-    inst_table[0xF0] = LD_8(cpu.A, h_mem);
+    inst_table[0xF0] = Instruction {
+        [&](){
+            cpu.A.set( cpu.read_memory(0xFF00 + cpu.read_memory(cpu.pc + 1)) );
+            cpu.pc++;
+        }
+    };
     inst_table[0xF1] = cpu.POP(AF);
     inst_table[0xF2] = Instruction {
-        [&](){
-            cpu.A.set( cpu.read_memory(0xFF00 + cpu.C) );
+        [&cpu = cpu](){
+            cpu.A.set( cpu.read_memory(0xFF00 + cpu.C.get()) );
         }
     };
     inst_table[0xF3] = cpu.DI();    
@@ -275,4 +293,19 @@ void Decoder::init_instruction_table() {
     inst_table[0xFD] = NOP();
     inst_table[0xFE] = CP_8(cpu.A, imm8, cpu.F);
     inst_table[0xFF] = cpu.RST(0x38);
+}
+
+void Decoder::init_cb_table() {
+    for(int i = 0x00; i < 0x40; ++i) {
+        cb_table[i] = shift_ops[i / 8](regs[i % 8], cpu.F);
+    }
+    for(int i = 0x40; i < 0x80; ++i) {
+        cb_table[i] = BIT(regs[i % 8], (i - 0x40) / 8, cpu.F);
+    }
+    for(int i = 0x80; i < 0xC0; ++i) {
+        cb_table[i] = RES(regs[i % 8], (i - 0x80) / 8);
+    }
+    for(int i = 0xC0; i < 0x100; ++i) {
+        cb_table[i] = SET(regs[i % 8], (i - 0x80) / 8);
+    }
 }

@@ -143,6 +143,7 @@ void Disassembler::disassemble_at(uint16_t pos) {
         case 0xF2: cout << format("LDH A, [C]");    break;
 
         case 0xE8: cout << format("ADD SP, ${:02x}", BYTE1); break;
+        case 0xE9: cout << "JP HL"; break;
 
         case 0xEA: cout << format("LD [${:02x}{:02x}], A", BYTE2, BYTE1);    break;
         case 0xFA: cout << format("LD A, [${:02x}{:02x}]", BYTE2, BYTE1);    break;

@@ -5,6 +5,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <iostream>
 #include "Register.h"
 #include "Decoder.h"
 
@@ -17,6 +18,7 @@ public:
 
     void tick() {(this->*current_state)();}
     void print_state();
+    void log_state(std::ostream& os);
 
     //flags
     FlagRegister F;
