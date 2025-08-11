@@ -2,6 +2,7 @@
 #include <format>
 #include <memory>
 #include "../include/Arithmetic.h"
+#include "../include/Decoder.h"
 #include "../include/CPU.h"
 #include "../include/MMU.h"
 #include "../include/Instruction.h"
@@ -26,8 +27,11 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
 CPU::CPU(MMU& memory):
     F{0xB0}, pc{0x100}, sp{0xFFFE},
     A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, 
-    M{*this, H, L}, memory{memory}, current_state{&fetch_and_execute},
-    decoder{new Decoder(*this)}, REG_IF(memory, 0xFF0F), REG_IE(memory, 0xFFFF) {}
+    M{*this, H, L}, REG_IF{memory, 0xFF0F}, REG_IE{memory, 0xFFFF},
+    memory{memory}, current_state{&fetch_and_execute},
+    decoder{std::make_unique<Decoder>(*this)} {}
+
+CPU::~CPU() = default;
 
 uint8_t CPU::read_memory(uint16_t addr) {   
         cycles += 4;    //CPU memory access costs 4 cycles 

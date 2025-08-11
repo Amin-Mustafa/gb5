@@ -1,6 +1,7 @@
 #include <iostream>
 #include "../include/SerialPort.h"
 #include "../include/MMU.h"
+#include "../include/MemoryRegion.h"
 
 uint8_t SerialPort::serial_read(uint16_t addr) {
     switch(addr) {
@@ -28,10 +29,12 @@ void SerialPort::serial_write(uint16_t addr, uint8_t val){
 }
 
 SerialPort::SerialPort(MMU& mem)
-    :region {
-        mem,
-        0xFF01,
-        0xFF02,
-        [this](uint16_t addr){return serial_read(addr);},
-        [this](uint16_t addr, uint8_t val) { serial_write(addr,val); }
-    } {}
+    {   
+        mem.add_region(
+            std::make_unique<MemoryRegion> (
+                0xFF01, 0xFF02,
+                [this](uint16_t addr){return serial_read(addr);},
+                [this](uint16_t addr, uint8_t val) { serial_write(addr,val); }
+            )
+        );
+    }

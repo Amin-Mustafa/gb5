@@ -1,8 +1,8 @@
 #ifndef SERIALPORT_H
 #define SERIALPORT_H
 
-#include "MemoryRegion.h"
 #include <vector>
+#include <cstdint>
 
 class MMU;
 
@@ -15,8 +15,7 @@ public:
     void serial_write(uint16_t addr, uint8_t val); 
     std::vector<uint8_t> destination_buffer;
 private: 
-    //Serial port maps 0xFF01 and 0xFF02
-    MemoryRegion region;  
+    //Serial port maps 0xFF01 and 0xFF02 
     uint8_t serial[2];      
     //serial[0]: data to be sent
     //serial[1]: serial control

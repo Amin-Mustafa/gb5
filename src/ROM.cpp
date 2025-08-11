@@ -2,15 +2,19 @@
 #include <iostream>
 #include "../include/ROM.h"
 #include "../include/MMU.h"
+#include "../include/MemoryRegion.h"
 
-ROM::ROM(MMU& mmu)
-	:data(0x8000), 
-	region {
-		mmu,
-		0x0000, 0x7FFF,
-		[&mem = data](uint16_t addr)->uint8_t { return mem[addr]; },
-		[](uint16_t, uint8_t) {}
-	} {}
+ROM::ROM(MMU& memory)
+	:data(0x8000) {
+		//construct memory region
+		memory.add_region(
+			std::make_unique<MemoryRegion> (
+				0x0000, 0x7FFF,
+				[this](uint16_t addr) {return data[addr];},
+				[](uint16_t, uint8_t){}
+			)
+		);
+	}
 
 void ROM::load(const std::string& filename){
 	std::ifstream ifs(filename, std::ios::binary);

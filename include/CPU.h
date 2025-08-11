@@ -7,11 +7,11 @@
 #include <string>
 #include <iostream>
 #include "Register.h"
-#include "Decoder.h"
-#include "MemoryContainer.h"
+#include "MappedRegister.h"
 
 class MMU;
 class Instruction;
+class Decoder;
 
 enum class Interrupt {
     VBLANK, LCD, SERIAL, TIMER, JOYPAD
@@ -20,7 +20,8 @@ enum class Interrupt {
 class CPU {
 public:
     CPU(MMU& memory);
-
+    ~CPU();
+    
     void tick() {(this->*current_state)();}
     void print_state();
     void log_state(std::ostream& os);
@@ -33,6 +34,8 @@ public:
     //Data registers
     DataRegister A, B, C, D, E, H, L;
     MemRegister M;
+
+    MappedRegister REG_IF, REG_IE;
 
     //memory
     MMU& memory;
@@ -51,9 +54,6 @@ private:
 
     //facilities
     std::unique_ptr<Decoder> decoder;
-    Instruction current_inst;
-    MappedRegister REG_IF;
-    MappedRegister REG_IE;
     bool interrupt_requested(Interrupt kind);
     void service_interrupt(Interrupt kind);
 
