@@ -17,21 +17,51 @@ void dbg_out(SerialPort* sp) {
     std::cout << '\n';
 }
 
-int main() {
+long line_count(const std::string& filename) {
+    std::fstream fs;
+    fs.open(filename);
+    auto count = std::count_if(std::istreambuf_iterator<char>{fs}, {}, [](char c) { return c == '\n'; });
+    return count;
+    fs.close();
+}
+
+int main(int argc, char* argv[]) {
     MMU mem;
     ROM rom(mem);
-    MemoryContainer ram(0x8000, 0xFFFF, mem);
-    mem.write(0xFF44, 0x90);    //assume for now that LY = 0x90
+    MemoryContainer ram(mem, 0x8000, 0xFFFF);
     SerialPort sp(mem);
     CPU cpu(mem);
     Disassembler dis(mem);
 
-    rom.load("ROM/09-op r,r.gb");
-    while(true) {
-        dis.disassemble_at(cpu.pc);
-        cpu.print_state();
-        dbg_out(&sp);
-        cpu.tick();
-        std::cin.get();
+    std::string cart = "ROM/07-jr,jp,call,ret,rst.gb";
+
+    std::string blargg_log_file = "log_cmp/Blargg.txt";
+    std::string my_log_file = "log_cmp/log.txt";
+    std::ofstream fs;
+    long blargg_log_lines;
+    std::string option = argv[1];
+
+    mem.write(0xFF44, 0x90);    //assume for now that LY = 0x90
+    rom.load(cart);
+    
+    if(option == "log") {
+        fs.open(my_log_file);
+        blargg_log_lines = line_count(blargg_log_file);
+        std::cout << blargg_log_lines << '\n';
+        for(long lines = 0; lines <= blargg_log_lines; ++lines) {
+            cpu.log_state(fs);
+            cpu.tick();
+        }
+        fs.close(); 
+    }
+
+    else if(option == "dis") {
+        while(true) {
+            dis.disassemble_at(cpu.pc);
+            cpu.print_state();
+            cpu.tick();
+            dbg_out(&sp);
+            std::cin.get();
+        }   
     }
 }

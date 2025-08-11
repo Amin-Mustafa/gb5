@@ -8,9 +8,14 @@
 #include <iostream>
 #include "Register.h"
 #include "Decoder.h"
+#include "MemoryContainer.h"
 
 class MMU;
 class Instruction;
+
+enum class Interrupt {
+    VBLANK, LCD, SERIAL, TIMER, JOYPAD
+}; 
 
 class CPU {
 public:
@@ -33,21 +38,26 @@ public:
     MMU& memory;
     uint8_t read_memory(uint16_t addr);
     void write_memory(uint16_t addr, uint8_t val);
-    
 private:
     using StateFunction = void (CPU::*)();  //pointer to state function
 
     int cycles;
-    bool int_enable;
+    bool IME;
 
     //CPU states
     StateFunction current_state;
     void fetch_and_execute();
+    void interrupted();
 
-    
-    //internal functions
+    //facilities
     std::unique_ptr<Decoder> decoder;
+    Instruction current_inst;
+    MappedRegister REG_IF;
+    MappedRegister REG_IE;
+    bool interrupt_requested(Interrupt kind);
+    void service_interrupt(Interrupt kind);
 
+    //internal functions
     void jump(uint16_t addr);
     void pc_return();
     void push_to_stack(uint16_t num);

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <format>
 #include <memory>
+#include "../include/Arithmetic.h"
 #include "../include/CPU.h"
 #include "../include/MMU.h"
 #include "../include/Instruction.h"
@@ -26,9 +27,9 @@ CPU::CPU(MMU& memory):
     F{0xB0}, pc{0x100}, sp{0xFFFE},
     A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, 
     M{*this, H, L}, memory{memory}, current_state{&fetch_and_execute},
-    decoder{new Decoder(*this)} {}
+    decoder{new Decoder(*this)}, REG_IF(memory, 0xFF0F), REG_IE(memory, 0xFFFF) {}
 
-uint8_t CPU::read_memory(uint16_t addr) {
+uint8_t CPU::read_memory(uint16_t addr) {   
         cycles += 4;    //CPU memory access costs 4 cycles 
         return memory.read(addr);
     }
@@ -41,6 +42,30 @@ void CPU::fetch_and_execute() {
     Instruction inst = decoder->decode(read_memory(pc));
     inst.execute();
     pc++;
+
+    //check for interrupts
+    if(IME) {
+    //interrupts are enabled and...
+        if(REG_IE.get() & REG_IF.get() & 0x1F) {  
+            //an interrupt is requested
+            current_state = interrupted;
+        }
+    }
+}
+
+void CPU::interrupted() {
+    static Interrupt sources[5] = {
+        Interrupt::VBLANK, Interrupt::LCD, Interrupt::SERIAL, Interrupt::TIMER, Interrupt::JOYPAD
+    };
+    for(int i = 0; i < 5; ++i) {
+        if(interrupt_requested(sources[i])) {
+            //CPU handles first interrupt it sees, then resumes normal operation
+            //for one instruction, then does the same interrupt check again.
+            service_interrupt(sources[i]); 
+            current_state = fetch_and_execute;
+            break;
+        }
+    }
 }
 
 void CPU::jump(uint16_t addr) {
@@ -74,6 +99,25 @@ void CPU::pop_from_stack(uint16_t& num) {
     uint16_t sp_val = sp.get();
     num = pair(read_memory(sp_val + 1), read_memory(sp_val));
     sp.set(sp_val + 2);
+}
+
+bool CPU::interrupt_requested(Interrupt kind) {
+    return Arithmetic::bit_check(REG_IF.get(), static_cast<uint8_t>(kind));
+}
+
+void CPU::service_interrupt(Interrupt kind) {
+    static uint16_t interrupt_vector[] = {0x40, 0x48, 0x50, 0x58, 0x60};
+    uint8_t interrupt = static_cast<uint8_t>(kind);
+    uint8_t requests = REG_IF.get();
+
+    //clear request and IME flag
+    requests = Arithmetic::bit_clear(requests, interrupt);
+    REG_IF.set(requests);
+    IME = false;
+    
+    //call to interrupt address
+    push_to_stack(pc);
+    jump(interrupt_vector[interrupt]);
 }
 
 //internal CPU operations
@@ -135,7 +179,7 @@ Instruction CPU::RET() {
 Instruction CPU::RETI() {
     return Instruction{
         [this](){
-            int_enable = true;
+            IME = true;
             pc_return();
         }
     };
@@ -151,19 +195,18 @@ Instruction CPU::RET_IF(FlagRegister::ConditionCheck cc) {
 Instruction CPU::RST(uint8_t destination) {
     return Instruction{
         [destination, this](){
-            //an RST is a special kind of jump that takes 16 cycles rather than 4
-            //its only advantage over JP is only needing one byte rather than 3
-            //so it can be used in interrupts
-            pc = destination;
-        },
-        16
+            //an RST is a special kind of call that takes 16 cycles rather than 24
+            //by having the destination built-in rather than fetched
+            push_to_stack(pc+1);
+            jump(destination - 1);
+        }
     };
 }
 Instruction CPU::DI(){
-    return Instruction{[this](){int_enable = false;}};
+    return Instruction{[this](){IME = false;}};
 }
 Instruction CPU::EI(){
-    return Instruction{[this](){int_enable = true;}};
+    return Instruction{[this](){IME = true;}};
 }
 
 void CPU::print_state(){
