@@ -1,5 +1,5 @@
 #ifndef MAPPEDREGISTER_H
-#define MAPPED_REGISTER_H
+#define MAPPEDREGISTER_H
 
 #include <cstdint>
 

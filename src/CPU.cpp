@@ -7,6 +7,7 @@
 #include "../include/MMU.h"
 #include "../include/Instruction.h"
 #include "../include/Disassembler.h"
+#include "../include/InterruptHandler.h"
 
 constexpr uint16_t pair(uint8_t hi, uint8_t lo) {
     return (hi << 8) | lo;
@@ -29,7 +30,8 @@ CPU::CPU(MMU& memory):
     A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, 
     M{*this, H, L}, REG_IF{memory, 0xFF0F}, REG_IE{memory, 0xFFFF},
     memory{memory}, current_state{&fetch_and_execute},
-    decoder{std::make_unique<Decoder>(*this)} {}
+    decoder{std::make_unique<Decoder>(*this)},
+    interrupt_handler{std::make_unique<InterruptHandler>(memory)} {}
 
 CPU::~CPU() = default;
 
@@ -47,27 +49,30 @@ void CPU::fetch_and_execute() {
     inst.execute();
     pc++;
 
-    //check for interrupts
-    if(IME) {
-    //interrupts are enabled and...
-        if(REG_IE.get() & REG_IF.get() & 0x1F) {  
-            //an interrupt is requested
-            current_state = interrupted;
-        }
+    //check for interrupts before going to the next instruction
+    if(interrupts_active() == true) {
+        current_state = interrupted;
     }
 }
 
-void CPU::interrupted() {
-    static Interrupt sources[5] = {
-        Interrupt::VBLANK, Interrupt::LCD, Interrupt::SERIAL, Interrupt::TIMER, Interrupt::JOYPAD
-    };
-    for(int i = 0; i < 5; ++i) {
-        if(interrupt_requested(sources[i])) {
-            //CPU handles first interrupt it sees, then resumes normal operation
-            //for one instruction, then does the same interrupt check again.
-            service_interrupt(sources[i]); 
+bool CPU::interrupts_active() {
+    return IME && interrupt_handler->active();
+}
+
+void CPU::interrupted() {  
+    for(int i = 0; i < InterruptHandler::num_interrupts; ++i) {
+        auto req = static_cast<InterruptHandler::Interrupt>(i);
+        if(interrupt_handler->requested(req)) {
+            //disable IME and clear interrupt request
+            IME = false; 
+            interrupt_handler->clear(req);
+            cycles += 4;
+
+            push_to_stack(pc);
+            jump(interrupt_handler->service_addr(req));
+
             current_state = fetch_and_execute;
-            break;
+            return;
         }
     }
 }
@@ -103,25 +108,6 @@ void CPU::pop_from_stack(uint16_t& num) {
     uint16_t sp_val = sp.get();
     num = pair(read_memory(sp_val + 1), read_memory(sp_val));
     sp.set(sp_val + 2);
-}
-
-bool CPU::interrupt_requested(Interrupt kind) {
-    return Arithmetic::bit_check(REG_IF.get(), static_cast<uint8_t>(kind));
-}
-
-void CPU::service_interrupt(Interrupt kind) {
-    static uint16_t interrupt_vector[] = {0x40, 0x48, 0x50, 0x58, 0x60};
-    uint8_t interrupt = static_cast<uint8_t>(kind);
-    uint8_t requests = REG_IF.get();
-
-    //clear request and IME flag
-    requests = Arithmetic::bit_clear(requests, interrupt);
-    REG_IF.set(requests);
-    IME = false;
-    
-    //call to interrupt address
-    push_to_stack(pc);
-    jump(interrupt_vector[interrupt]);
 }
 
 //internal CPU operations

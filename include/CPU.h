@@ -12,10 +12,7 @@
 class MMU;
 class Instruction;
 class Decoder;
-
-enum class Interrupt {
-    VBLANK, LCD, SERIAL, TIMER, JOYPAD
-}; 
+class InterruptHandler;
 
 class CPU {
 public:
@@ -54,8 +51,10 @@ private:
 
     //facilities
     std::unique_ptr<Decoder> decoder;
-    bool interrupt_requested(Interrupt kind);
-    void service_interrupt(Interrupt kind);
+
+    //interrupt stuff
+    std::unique_ptr<InterruptHandler> interrupt_handler;
+    bool interrupts_active();
 
     //internal functions
     void jump(uint16_t addr);

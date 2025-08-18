@@ -10,11 +10,14 @@
 #include <fstream>
 #include <algorithm>
 
-void dbg_out(SerialPort* sp) {
+std::string dbg_out(SerialPort* sp) {
+    std::string dbg_msg;
     for(const auto& c : sp->destination_buffer) {
+        dbg_msg += c;
         std::cout << (char)c;
     }
     std::cout << '\n';
+    return dbg_msg;
 }
 
 long line_count(const std::string& filename) {
