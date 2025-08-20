@@ -1,5 +1,5 @@
 #include "../include/Disassembler.h"
-#include "../include/MMU.h"
+#include "../include/Memory/MMU.h"
 
 #include <iostream>
 #include <iomanip>

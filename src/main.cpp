@@ -1,6 +1,6 @@
-#include "../include/MMU.h"
+#include "../include/Memory/MMU.h"
 #include "../include/Register.h"
-#include "../include/MemoryMap.h"
+#include "../include/Memory/MemoryMap.h"
 
 #include "../include/CPU.h"
 #include "../include/Disassembler.h"
@@ -32,10 +32,10 @@ int main(int argc, char* argv[]) {
     CPU cpu(mem, map.interrupt_controller);
     Disassembler dis(mem);
 
-    std::string cart = "ROM/07-jr,jp,call,ret,rst.gb";
+    std::string cart = "../ROM/07-jr,jp,call,ret,rst.gb";
 
-    std::string blargg_log_file = "log_cmp/Blargg.txt";
-    std::string my_log_file = "log_cmp/log.txt";
+    std::string blargg_log_file = "../log_cmp/Blargg.txt";
+    std::string my_log_file = "../log_cmp/log.txt";
     std::ofstream fs;
     long blargg_log_lines;
     std::string option = argv[1];

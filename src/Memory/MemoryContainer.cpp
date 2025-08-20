@@ -1,7 +1,7 @@
 #include <memory>
-#include "../include/MemoryContainer.h"
-#include "../include/MMU.h"
-#include "../include/MemoryRegion.h"
+#include "../include/Memory/MemoryContainer.h"
+#include "../include/Memory/MMU.h"
+#include "../include/Memory/MemoryRegion.h"
 
 MemoryContainer::MemoryContainer(MMU& mmu, uint16_t start, uint16_t end)
     :data(end - start + 1),

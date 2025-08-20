@@ -1,5 +1,5 @@
-#include "../include/MemoryRegion.h"
-#include "../include/MMU.h"
+#include "../include/Memory/MemoryRegion.h"
+#include "../include/Memory/MMU.h"
 
 MemoryRegion::MemoryRegion(MMU& mmu, uint16_t start, uint16_t end, ReadFunc read_func, WriteFunc write_func)
     :start_addr{start}, end_addr{end},

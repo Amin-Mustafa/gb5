@@ -4,10 +4,10 @@
 #include <memory>
 #include <string>
 
-#include "../include/ROM.h"
-#include "../include/MemoryContainer.h"
-#include "../include/SerialPort.h"
-#include "../include/InterruptController.h"
+#include "ROM.h"
+#include "MemoryContainer.h"
+#include "SerialPort.h"
+#include "InterruptController.h"
 
 class MMU;
 

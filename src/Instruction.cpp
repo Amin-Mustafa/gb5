@@ -1,7 +1,7 @@
 #include "../include/Arithmetic.h"
 #include "../include/Register.h"
 #include "../include/Instruction.h"
-#include "../include/MMU.h"
+#include "../include/Memory/MMU.h"
 
 namespace Operation {
 

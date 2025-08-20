@@ -5,8 +5,8 @@ Requires gcc 8 or higher. If you have an installation of make, download the zip 
     ```
     make
     ```
-to build.
-You could also manually compile with gcc directly, but make sure to use 
+to build. Note that this requires a Unix-like build environment, such as with MSYS2.
+You could also manually compile all source and include files with gcc directly, but make sure to use 
     ```
     -std=c++20
     ```

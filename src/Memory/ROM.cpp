@@ -1,8 +1,8 @@
 #include <fstream>
 #include <iostream>
-#include "../include/ROM.h"
-#include "../include/MMU.h"
-#include "../include/MemoryRegion.h"
+#include "../include/Memory/ROM.h"
+#include "../include/Memory/MMU.h"
+#include "../include/Memory/MemoryRegion.h"
 
 ROM::ROM(MMU& mmu)
 	:data(0x8000),

@@ -1,7 +1,7 @@
 #include <iostream>
-#include "../include/SerialPort.h"
-#include "../include/MMU.h"
-#include "../include/MemoryRegion.h"
+#include "../include/Memory/SerialPort.h"
+#include "../include/Memory/MMU.h"
+#include "../include/Memory/MemoryRegion.h"
 
 uint8_t SerialPort::serial_read(uint16_t addr) {
     switch(addr) {

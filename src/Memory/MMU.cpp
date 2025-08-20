@@ -1,5 +1,5 @@
-#include "../include/MMU.h"
-#include "../include/MemoryRegion.h"
+#include "../include/Memory/MMU.h"
+#include "../include/Memory/MemoryRegion.h"
 #include <stdexcept>
 
 MMU::MMU() = default;

@@ -1,4 +1,4 @@
-#include "../include/InterruptController.h"
+#include "../include/Memory/InterruptController.h"
 #include "../include/Arithmetic.h"
 #include "../include/CPU.h"
 #include "../include/Instruction.h"

@@ -1,5 +1,5 @@
 #ifndef MMU_H
-#define MMU_h
+#define MMU_H
 
 #include <vector>
 #include <cstdint>

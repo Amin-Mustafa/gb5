@@ -4,10 +4,10 @@
 #include "../include/Arithmetic.h"
 #include "../include/Decoder.h"
 #include "../include/CPU.h"
-#include "../include/MMU.h"
+#include "../include/Memory/MMU.h"
 #include "../include/Instruction.h"
 #include "../include/Disassembler.h"
-#include "../include/InterruptController.h"
+#include "../include/Memory/InterruptController.h"
 
 constexpr uint16_t pair(uint8_t hi, uint8_t lo) {
     return (hi << 8) | lo;
