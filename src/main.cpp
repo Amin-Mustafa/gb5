@@ -1,8 +1,6 @@
 #include "../include/MMU.h"
-#include "../include/ROM.h"
-#include "../include/MemoryContainer.h"
 #include "../include/Register.h"
-#include "../include/SerialPort.h"
+#include "../include/MemoryMap.h"
 
 #include "../include/CPU.h"
 #include "../include/Disassembler.h"
@@ -10,9 +8,9 @@
 #include <fstream>
 #include <algorithm>
 
-std::string dbg_out(SerialPort* sp) {
+std::string dbg_out(SerialPort& sp) {
     std::string dbg_msg;
-    for(const auto& c : sp->destination_buffer) {
+    for(const auto& c : sp.destination_buffer) {
         dbg_msg += c;
         std::cout << (char)c;
     }
@@ -30,10 +28,8 @@ long line_count(const std::string& filename) {
 
 int main(int argc, char* argv[]) {
     MMU mem;
-    ROM rom(mem);
-    MemoryContainer ram(mem, 0x8000, 0xFFFF);
-    SerialPort sp(mem);
-    CPU cpu(mem);
+    MemoryMap map(mem);
+    CPU cpu(mem, map.interrupt_handler);
     Disassembler dis(mem);
 
     std::string cart = "ROM/07-jr,jp,call,ret,rst.gb";
@@ -45,7 +41,7 @@ int main(int argc, char* argv[]) {
     std::string option = argv[1];
 
     mem.write(0xFF44, 0x90);    //assume for now that LY = 0x90
-    rom.load(cart);
+    map.rom.load(cart);
     
     if(option == "log") {
         fs.open(my_log_file);
@@ -63,7 +59,7 @@ int main(int argc, char* argv[]) {
             dis.disassemble_at(cpu.pc);
             cpu.print_state();
             cpu.tick();
-            dbg_out(&sp);
+            dbg_out(map.serial_port);
             std::cin.get();
         }   
     }

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cstdint>
+#include "MemoryRegion.h"
 
 class MMU;
 
@@ -19,6 +20,7 @@ private:
     uint8_t serial[2];      
     //serial[0]: data to be sent
     //serial[1]: serial control
+    MemoryRegion region;
 };
 
 #endif

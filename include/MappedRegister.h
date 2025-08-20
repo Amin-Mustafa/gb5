@@ -2,6 +2,7 @@
 #define MAPPEDREGISTER_H
 
 #include <cstdint>
+#include "MemoryRegion.h"
 
 class MMU;
 
@@ -11,6 +12,7 @@ class MappedRegister {
 //but with only one value.
 private:    
     uint8_t data;
+    MemoryRegion region;
 public:
     MappedRegister(MMU& mmu, uint16_t addr);
     uint8_t get() {return data;}

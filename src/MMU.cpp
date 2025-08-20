@@ -5,12 +5,12 @@
 MMU::MMU() = default;
 MMU::~MMU() = default;
 
-void MMU::add_region(std::unique_ptr<MemoryRegion> region){
+void MMU::add_region(MemoryRegion* region){
     for(int addr = region->start(); addr <= region->end(); ++addr){
-        memory_lookup[addr] = region.get();
+        memory_lookup[addr] = region;
     }
-    memory_map.push_back(std::move(region));    //transfer ownership to memory_map
 }
+
 MemoryRegion* MMU::region_of(uint16_t addr) {
     MemoryRegion* region = memory_lookup[addr];
     if(region) 

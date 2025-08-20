@@ -7,7 +7,6 @@
 #include <string>
 #include <iostream>
 #include "Register.h"
-#include "MappedRegister.h"
 
 class MMU;
 class Instruction;
@@ -16,7 +15,7 @@ class InterruptHandler;
 
 class CPU {
 public:
-    CPU(MMU& memory);
+    CPU(MMU& mmu, InterruptHandler& ih);
     ~CPU();
     
     void tick() {(this->*current_state)();}
@@ -32,10 +31,8 @@ public:
     DataRegister A, B, C, D, E, H, L;
     MemRegister M;
 
-    MappedRegister REG_IF, REG_IE;
-
     //memory
-    MMU& memory;
+    MMU& mmu;
     uint8_t read_memory(uint16_t addr);
     void write_memory(uint16_t addr, uint8_t val);
 private:
@@ -51,10 +48,7 @@ private:
 
     //facilities
     std::unique_ptr<Decoder> decoder;
-
-    //interrupt stuff
-    std::unique_ptr<InterruptHandler> interrupt_handler;
-    bool interrupts_active();
+    InterruptHandler& interrupt_handler;
 
     //internal functions
     void jump(uint16_t addr);

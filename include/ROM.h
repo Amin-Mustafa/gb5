@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <string>
+#include "MemoryRegion.h"
 
 class MMU;
 
@@ -13,6 +14,7 @@ private:
 public:
     void load(const std::string& filename); //load cartridge
     ROM(MMU& memory);
+    MemoryRegion region;
 };
 
 

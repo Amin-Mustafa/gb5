@@ -28,13 +28,10 @@ void SerialPort::serial_write(uint16_t addr, uint8_t val){
     }
 }
 
-SerialPort::SerialPort(MMU& mem)
-    {   
-        mem.add_region(
-            std::make_unique<MemoryRegion> (
-                0xFF01, 0xFF02,
-                [this](uint16_t addr){return serial_read(addr);},
-                [this](uint16_t addr, uint8_t val) { serial_write(addr,val); }
-            )
-        );
-    }
+SerialPort::SerialPort(MMU& mmu)
+    :region {
+        mmu,
+        0xFF01, 0xFF02,
+        [this](uint16_t addr){return serial_read(addr);},
+        [this](uint16_t addr, uint8_t val) { serial_write(addr,val); }
+    } {}

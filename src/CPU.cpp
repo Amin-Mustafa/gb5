@@ -25,23 +25,22 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
     lo = pair & 0xff;
 }
 
-CPU::CPU(MMU& memory):
+CPU::CPU(MMU& mmu, InterruptHandler& interrupt_handler):
     F{0xB0}, pc{0x100}, sp{0xFFFE},
     A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, 
-    M{*this, H, L}, REG_IF{memory, 0xFF0F}, REG_IE{memory, 0xFFFF},
-    memory{memory}, current_state{&fetch_and_execute},
-    decoder{std::make_unique<Decoder>(*this)},
-    interrupt_handler{std::make_unique<InterruptHandler>(memory)} {}
+    M{*this, H, L}, mmu{mmu}, current_state{&fetch_and_execute},
+    decoder{std::make_unique<Decoder>(*this)}, interrupt_handler{interrupt_handler} 
+    {}
 
 CPU::~CPU() = default;
 
 uint8_t CPU::read_memory(uint16_t addr) {   
         cycles += 4;    //CPU memory access costs 4 cycles 
-        return memory.read(addr);
+        return mmu.read(addr);
     }
 void CPU::write_memory(uint16_t addr, uint8_t val) { 
     cycles += 4;   
-    memory.write(addr, val); 
+    mmu.write(addr, val); 
 }
 
 void CPU::fetch_and_execute() {
@@ -50,26 +49,23 @@ void CPU::fetch_and_execute() {
     pc++;
 
     //check for interrupts before going to the next instruction
-    if(interrupts_active() == true) {
+    if(IME && interrupt_handler.active()) {
         current_state = interrupted;
     }
 }
 
-bool CPU::interrupts_active() {
-    return IME && interrupt_handler->active();
-}
 
 void CPU::interrupted() {  
     for(int i = 0; i < InterruptHandler::num_interrupts; ++i) {
         auto req = static_cast<InterruptHandler::Interrupt>(i);
-        if(interrupt_handler->requested(req)) {
+        if(interrupt_handler.requested(req)) {
             //disable IME and clear interrupt request
             IME = false; 
-            interrupt_handler->clear(req);
+            interrupt_handler.clear(req);
             cycles += 4;
 
             push_to_stack(pc);
-            jump(interrupt_handler->service_addr(req));
+            jump(interrupt_handler.service_addr(req));
 
             current_state = fetch_and_execute;
             return;
@@ -203,7 +199,7 @@ void CPU::print_state(){
     std::cout << 
         std::format("A:{:02x}, B:{:02x}, C:{:02x}, D:{:02x}, E:{:02x}, H:{:02x}, L:{:02x}, ",
                     A.get(), B.get(), C.get(), D.get(), E.get(), H.get(), L.get()) <<
-        std::format("[HL]:{:02x}, [DE]:{:02x}, ", memory.read(pair(H, L)), memory.read(pair(D,E))) <<
+        std::format("[HL]:{:02x}, [DE]:{:02x}, ", mmu.read(pair(H, L)), mmu.read(pair(D,E))) <<
         std::format("PC:{:04x}, SP:{:04x}, F:{:d}{:d}{:d}{:d}\n", pc, sp.get(), F.get_flag(Flag::ZERO),
                     F.get_flag(Flag::NEGATIVE), F.get_flag(Flag::HALF_CARRY), F.get_flag(Flag::CARRY));
 }
@@ -217,6 +213,6 @@ void CPU::log_state(std::ostream& stream) {
         <<
         std::format(
             "SP: {:04X} PC: 00:{:04X} ({:02X} {:02X} {:02X} {:02X})\n", sp.get(), pc,
-            memory.read(pc), memory.read(pc+1), memory.read(pc+2), memory.read(pc+3)
+            mmu.read(pc), mmu.read(pc+1), mmu.read(pc+2), mmu.read(pc+3)
             );
 }
