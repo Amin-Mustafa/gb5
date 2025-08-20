@@ -7,7 +7,7 @@
 #include "../include/ROM.h"
 #include "../include/MemoryContainer.h"
 #include "../include/SerialPort.h"
-#include "../include/InterruptHandler.h"
+#include "../include/InterruptController.h"
 
 class MMU;
 
@@ -15,10 +15,10 @@ struct MemoryMap {
     ROM rom;
     MemoryContainer ram;
     SerialPort serial_port;
-    InterruptHandler interrupt_handler;
+    InterruptController interrupt_controller;
 
     MemoryMap(MMU& mmu) 
-        :rom{mmu}, ram{mmu, 0x8000, 0xFFFF}, serial_port{mmu}, interrupt_handler{mmu} {}
+        :rom{mmu}, ram{mmu, 0x8000, 0xFFFF}, serial_port{mmu}, interrupt_controller{mmu} {}
 };
 
 #endif

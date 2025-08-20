@@ -7,7 +7,7 @@
 #include "../include/MMU.h"
 #include "../include/Instruction.h"
 #include "../include/Disassembler.h"
-#include "../include/InterruptHandler.h"
+#include "../include/InterruptController.h"
 
 constexpr uint16_t pair(uint8_t hi, uint8_t lo) {
     return (hi << 8) | lo;
@@ -25,11 +25,11 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
     lo = pair & 0xff;
 }
 
-CPU::CPU(MMU& mmu, InterruptHandler& interrupt_handler):
+CPU::CPU(MMU& mmu, InterruptController& interrupt_controller):
     F{0xB0}, pc{0x100}, sp{0xFFFE},
     A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, 
     M{*this, H, L}, mmu{mmu}, current_state{&fetch_and_execute},
-    decoder{std::make_unique<Decoder>(*this)}, interrupt_handler{interrupt_handler} 
+    decoder{std::make_unique<Decoder>(*this)}, interrupt_controller{interrupt_controller} 
     {}
 
 CPU::~CPU() = default;
@@ -49,23 +49,23 @@ void CPU::fetch_and_execute() {
     pc++;
 
     //check for interrupts before going to the next instruction
-    if(IME && interrupt_handler.active()) {
+    if(IME && interrupt_controller.active()) {
         current_state = interrupted;
     }
 }
 
 
 void CPU::interrupted() {  
-    for(int i = 0; i < InterruptHandler::num_interrupts; ++i) {
-        auto req = static_cast<InterruptHandler::Interrupt>(i);
-        if(interrupt_handler.requested(req)) {
+    for(int i = 0; i < InterruptController::num_interrupts; ++i) {
+        auto req = static_cast<InterruptController::Interrupt>(i);
+        if(interrupt_controller.requested(req)) {
             //disable IME and clear interrupt request
             IME = false; 
-            interrupt_handler.clear(req);
+            interrupt_controller.clear(req);
             cycles += 4;
 
             push_to_stack(pc);
-            jump(interrupt_handler.service_addr(req));
+            jump(interrupt_controller.service_addr(req));
 
             current_state = fetch_and_execute;
             return;

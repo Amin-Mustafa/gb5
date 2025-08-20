@@ -11,11 +11,11 @@
 class MMU;
 class Instruction;
 class Decoder;
-class InterruptHandler;
+class InterruptController;
 
 class CPU {
 public:
-    CPU(MMU& mmu, InterruptHandler& ih);
+    CPU(MMU& mmu, InterruptController& ih);
     ~CPU();
     
     void tick() {(this->*current_state)();}
@@ -48,7 +48,7 @@ private:
 
     //facilities
     std::unique_ptr<Decoder> decoder;
-    InterruptHandler& interrupt_handler;
+    InterruptController& interrupt_controller;
 
     //internal functions
     void jump(uint16_t addr);

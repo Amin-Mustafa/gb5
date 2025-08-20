@@ -1,5 +1,5 @@
-#ifndef INTERRUPTHANDLER_H
-#define INTERRUPTHANDLER_H
+#ifndef INTERRUPTCONTROLLER_H
+#define INTERRUPTCONTROLLER_H
 
 #include <cstdint>
 #include "MappedRegister.h"
@@ -8,7 +8,7 @@ class MMU;
 class Instruction;
 class CPU;
 
-class InterruptHandler {
+class InterruptController {
 private:
     MappedRegister irq; 
     MappedRegister ie;
@@ -17,7 +17,7 @@ public:
         VBLANK = 0, LCD, SERIAL, TIMER, JOYPAD, num_interrupts
     };
 
-    InterruptHandler(MMU& mem);
+    InterruptController(MMU& mem);
     bool active();
     bool requested(Interrupt kind);
     void request(Interrupt kind);

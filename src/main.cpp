@@ -29,7 +29,7 @@ long line_count(const std::string& filename) {
 int main(int argc, char* argv[]) {
     MMU mem;
     MemoryMap map(mem);
-    CPU cpu(mem, map.interrupt_handler);
+    CPU cpu(mem, map.interrupt_controller);
     Disassembler dis(mem);
 
     std::string cart = "ROM/07-jr,jp,call,ret,rst.gb";
