@@ -1,5 +1,5 @@
-#include "../include/Memory/MappedRegister.h"
-#include "../include/Memory/MMU.h"
+#include "../../include/Memory/MappedRegister.h"
+#include "../../include/Memory/MMU.h"
 
 MappedRegister::MappedRegister(MMU& mmu, uint16_t addr)
     :region {
@@ -8,3 +8,4 @@ MappedRegister::MappedRegister(MMU& mmu, uint16_t addr)
         [this](uint16_t) {return data;},
         [this](uint16_t addr, uint8_t val) {data = val;}
     } {}
+    

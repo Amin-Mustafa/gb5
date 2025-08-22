@@ -1,7 +1,7 @@
-#include "../include/Memory/InterruptController.h"
-#include "../include/Arithmetic.h"
-#include "../include/CPU.h"
-#include "../include/Instruction.h"
+#include "../../include/Memory/InterruptController.h"
+#include "../../include/Arithmetic.h"
+#include "../../include/CPU.h"
+#include "../../include/Instruction.h"
 
 InterruptController::InterruptController(MMU& mem)
     :irq{mem, 0xFF0F}, ie{mem, 0xFFFF} 
