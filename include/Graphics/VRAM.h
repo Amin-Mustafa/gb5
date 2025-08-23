@@ -9,19 +9,21 @@ class MMU;
 
 class VRAM {
 private:
-    //3 tile data blocks at 0x8000, 0x8800, and 0x9000
-    TileBlock block0{0x8000};
-    TileBlock block1{0x8800};
-    TileBlock block2{0x9000};
-    //two maps of 32x32 tile indices
-    std::array<uint8_t, 0x400> map1; 
-    std::array<uint8_t, 0x400> map2; 
-
+    std::array<uint8_t, 0x2000> data;
     MemoryRegion region;
+
 public:
     VRAM(MMU& mmu);
     uint8_t read(uint16_t addr);
     void write(uint16_t addr, uint8_t val);
+
+    bool accessible;
+
+    static constexpr uint16_t TILEDATA_1 = 0x8000;
+    static constexpr uint16_t TILEDATA_2 = 0x8800;
+    static constexpr uint16_t TILEDATA_3 = 0x9000;
+    static constexpr uint16_t TILEMAP_1 = 0x9800;
+    static constexpr uint16_t TILEMAP_2 = 0x9C00;
 };
 
 #endif
