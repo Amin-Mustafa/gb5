@@ -21,3 +21,7 @@ void VRAM::write(uint16_t addr, uint8_t val) {
     //PPU-facing; unrestricted VRAM write
     data[addr-0x8000] = val;
 }
+
+Tile VRAM::tile_at(uint16_t addr){
+    return Tile(&data[addr-0x8000]);
+}
