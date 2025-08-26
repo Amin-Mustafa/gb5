@@ -28,19 +28,22 @@ constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
 CPU::CPU(MMU& mmu, InterruptController& interrupt_controller):
     F{0xB0}, pc{0x100}, sp{0xFFFE},
     A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, 
-    M{*this, H, L}, mmu{mmu}, current_state{&fetch_and_execute},
+    mmu{mmu}, current_state{&fetch_and_execute},
     decoder{std::make_unique<Decoder>(*this)}, interrupt_controller{interrupt_controller} 
     {}
 
 CPU::~CPU() = default;
 
 uint8_t CPU::read_memory(uint16_t addr) {   
-        cycles += 1;    //CPU memory access costs an m-cycle 
         return mmu.read(addr);
     }
 void CPU::write_memory(uint16_t addr, uint8_t val) { 
-    cycles += 1;   
     mmu.write(addr, val); 
+}
+uint8_t CPU::fetch_byte() {
+    pc++;
+    uint8_t byte = read_memory(pc);
+    return byte;
 }
 
 void CPU::fetch_and_execute() {
@@ -71,128 +74,6 @@ void CPU::interrupted() {
             return;
         }
     }
-}
-
-void CPU::jump(uint16_t addr) {
-    pc = addr;
-    cycles += 1;
-}
-
-void CPU::pc_return() {
-    pop_from_stack(pc);
-    pc--;
-    cycles += 1;    //cost of jump
-}
-
-void CPU::push_to_stack(uint16_t num) {
-    uint16_t sp_val = sp.get();
-    write_memory(sp_val - 1, num >> 8);
-	write_memory(sp_val -2, num & 0xff);
-	sp.set(sp_val - 2);
-    cycles += 1; //pushing costs 4 cycles
-    //total cycle cost = 12
-}
-
-void CPU::pop_from_stack(uint8_t& num_hi, uint8_t& num_lo) {
-    uint16_t sp_val = sp.get();
-    num_lo = read_memory(sp_val);
-    num_hi = read_memory(sp_val + 1);
-    sp.set(sp_val + 2); //popping costs nothing
-    //total cycle cost = 8
-}
-void CPU::pop_from_stack(uint16_t& num) {
-    uint16_t sp_val = sp.get();
-    num = pair(read_memory(sp_val + 1), read_memory(sp_val));
-    sp.set(sp_val + 2);
-}
-
-//internal CPU operations
-Instruction CPU::JR(const Register8& offset, FlagRegister::ConditionCheck cc) {
-    return Instruction {
-        [&offset, cc, this](){
-            int8_t increment = static_cast<int8_t>(offset.get());
-            if(cc(F)) {
-                pc += increment;
-                cycles += 1;    
-            }
-        }
-    };
-    //if condition, total cycles = initial fetch (4) + operand fetch (4) + jump (4) = 12
-    //else, no jump; cycles = 8
-}
-Instruction CPU::JP(const Register16& destination, FlagRegister::ConditionCheck cc) {
-    return Instruction {
-        [&destination, cc, this](){
-            uint16_t addr = destination.get();
-            if(cc(F)) jump(addr - 1);
-        }
-    };
-}
-Instruction CPU::JPHL() {
-    //special instruction; this particular jump takes no cycles
-    return Instruction { [this](){ pc = pair(H,L) - 1; } };
-}
-Instruction CPU::CALL(const Register16& destination, FlagRegister::ConditionCheck cc) {
-    return Instruction{
-        [&destination, cc, this](){
-            uint16_t addr = destination.get();
-            if(cc(F)) {
-                push_to_stack(pc+1);
-                jump(addr - 1);
-            }
-        }
-    };
-}
-Instruction CPU::PUSH(RegisterPair& rp) {
-    return Instruction {
-        [&rp, this](){
-            push_to_stack(rp.get()); 
-        }
-    };
-}
-Instruction CPU::POP(RegisterPair& rp) {
-    return Instruction {
-        [&rp, this](){
-            uint16_t num;
-            pop_from_stack(num);
-            rp.set(num);
-        }
-    };
-}
-Instruction CPU::RET() {
-    return Instruction{[this](){pc_return();}};
-}
-Instruction CPU::RETI() {
-    return Instruction{
-        [this](){
-            IME = true;
-            pc_return();
-        }
-    };
-}
-Instruction CPU::RET_IF(FlagRegister::ConditionCheck cc) {
-    return Instruction {
-        [cc, this]() {
-            cycles += 1;    //condition check cost
-            if(cc(F)) pc_return();
-        }
-    };
-}
-Instruction CPU::RST(uint8_t destination) {
-    return Instruction{
-        [destination, this](){
-            //an RST is a special kind of call that takes 16 cycles rather than 24
-            //by having the destination built-in rather than fetched
-            push_to_stack(pc+1);
-            jump(destination - 1);
-        }
-    };
-}
-Instruction CPU::DI(){
-    return Instruction{[this](){IME = false;}};
-}
-Instruction CPU::EI(){
-    return Instruction{[this](){IME = true;}};
 }
 
 void CPU::print_state(){

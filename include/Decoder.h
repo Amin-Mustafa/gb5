@@ -5,7 +5,6 @@
 #include <memory>
 #include <vector>
 #include <functional>
-#include "Register.h"
 #include "Instruction.h"
 
 class CPU;

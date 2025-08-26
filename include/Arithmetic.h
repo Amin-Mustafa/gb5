@@ -20,7 +20,7 @@ inline bool half_carry_sub_16(uint16_t a, uint16_t b) {
     return (a & 0x0FFF) < (b & 0x0FFF);
 }
 
-inline uint16_t pair(uint8_t hi, uint8_t lo) {
+inline uint16_t pair(uint8_t& hi, uint8_t lo) {
     return (static_cast<uint16_t>(hi) << 8) | lo;
 }
 inline uint8_t rot_left_circ(uint8_t num, bool& carry) {

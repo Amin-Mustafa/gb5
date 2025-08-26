@@ -1,9 +1,21 @@
 #include "../include/Arithmetic.h"
-#include "../include/Register.h"
 #include "../include/Instruction.h"
 #include "../include/Memory/MMU.h"
 #include "../include/CPU.h"
 
+uint16_t pair(uint8_t hi, uint8_t lo) {
+    return ((uint16_t)hi << 8 ) | lo;
+}
+
+struct Pair {
+    uint8_t& hi;
+    uint8_t& lo;
+    uint16_t get() { return pair(hi, lo); }
+    void set(uint16_t val) {
+        hi = val >> 8;
+        lo = val & 0xFF;
+    }
+};
 
 namespace Operation {
 
@@ -13,64 +25,58 @@ Instruction NOP() {
     };  //do nothing
 }
 
-Instruction LD_r_r(Register8& dest, const Register8& src) {
+//----------------------LOADS-----------------------//
+//------8-bit------//
+Instruction LD_r_r(uint8_t& dest, const uint8_t& src) {
     return Instruction { 
-        [&dest, &src](CPU&){ dest.set( src.get() );}
+        [&dest, src](CPU&){ dest = src;}
     };
 }
-Instruction LD_r_n(Register8& dest) {
+Instruction LD_r_n(uint8_t& dest) {
     return Instruction {
-        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());}, //M1
-        [&dest](CPU& cpu) {dest.set(cpu.bus_read());}                //M2
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();}, //M1
+        [&dest](CPU& cpu) {dest = cpu.latch.Z;}                //M2
     };
 }
-Instruction LD_r_m(Register8& dest, const MemRegister& mem) {
+Instruction LD_r_m(uint8_t& dest, uint16_t addr) {
     return Instruction {
-        [&mem](CPU& cpu) {cpu.bus_write(mem.get());},    //M1
-        [&dest](CPU& cpu) {dest.set(cpu.bus_read());}            //M2
+        [addr](CPU& cpu) {cpu.latch.Z = cpu.read_memory(addr);},    //M1
+        [&dest](CPU& cpu) {dest = cpu.latch.Z;}            //M2
     };
 }
-Instruction LD_m_r(Register8& dest, MemRegister& mem) {
+Instruction LD_m_r(uint16_t addr, uint8_t src) {
     return Instruction {
-        [&mem, &dest](CPU& cpu) {mem.set(dest.get());},      //M1
+        [addr, src](CPU& cpu) {cpu.write_memory(addr, src);},      //M1
         [](CPU& cpu) {/* dummy */}                     //M2
     };
 }
-Instruction LD_m_n(MemRegister& mem) {
+Instruction LD_m_n(uint16_t addr) {
     return Instruction {
-        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());},
-        [&mem](CPU& cpu) {mem.set(cpu.bus_read());},
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [addr](CPU& cpu) {cpu.write_memory(addr, cpu.latch.Z);},
         [](CPU&){}
     };
 }
 Instruction LD_A_a16() {
     return Instruction {
-        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());},  //M1: read lsb of addr
-        [](CPU& cpu) {
-            uint8_t msb = Immediate8(cpu).get();
-            uint16_t addr = ((uint16_t)msb << 8) | cpu.bus_read();
-            cpu.bus_write(cpu.read_memory(addr));
-        },
-        [](CPU&){},
-        [](CPU& cpu) {cpu.A = cpu.bus_read();}
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},  //M1: read lsb of addr
+        [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(cpu.latch.combined());},
+        [](CPU& cpu) {cpu.A = cpu.latch.Z;}
     };
 }
 Instruction LD_a16_A() {
     return Instruction {
-        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());},  //M1: read lsb of addr
-        [](CPU& cpu) {},
-        [](CPU& cpu) {
-            uint8_t msb = Immediate8(cpu).get();
-            uint16_t addr = ((uint16_t)msb << 8) | cpu.bus_read();
-            cpu.write_memory(addr, cpu.A);
-        },
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.write_memory(cpu.latch.combined(), cpu.A);},
         [](CPU& cpu) {}
     };
 }
 Instruction LDH_A_C() {
     return Instruction {
-        [](CPU& cpu) {cpu.bus_write(cpu.read_memory(0xFF00 + cpu.C));},
-        [](CPU& cpu) {cpu.A = cpu.bus_read();}
+        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(0xFF00 + cpu.C);},
+        [](CPU& cpu) {cpu.A = cpu.latch.Z;}
     };
 }
 Instruction LDH_C_A(){
@@ -81,16 +87,138 @@ Instruction LDH_C_A(){
 }
 Instruction LDH_A_n(){
     return Instruction {
-        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());},
-        [](CPU& cpu) {cpu.bus_write(0xFF00 + cpu.bus_read());},
-        [](CPU& cpu) {cpu.A = cpu.bus_read();}
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(0xFF00 + cpu.latch.Z);},
+        [](CPU& cpu) {cpu.A = cpu.latch.Z;}
     };
 }
 Instruction LDH_n_A(){
     return Instruction {
-        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());},
-        [](CPU& cpu) {cpu.write_memory(0xFF00 + cpu.bus_read(), cpu.A)},
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.write_memory(0xFF00 + cpu.latch.Z, cpu.A);},
         [](CPU& cpu) {}
+    };
+}
+Instruction LD_A_HLdec() {
+    return Instruction {
+        [](CPU& cpu) {
+            Pair HL{cpu.H, cpu.L};
+            cpu.latch.Z = cpu.read_memory(HL.get());
+            HL.set(HL.get()-1);
+        },
+        [](CPU& cpu) {cpu.A = cpu.latch.Z;}
+    };
+}
+Instruction LD_HLdec_A() {
+    return Instruction {
+        [](CPU& cpu) {
+            Pair HL{cpu.H, cpu.L};
+            cpu.write_memory(HL.get(), cpu.A);
+            HL.set(HL.get() - 1);
+        },
+        [](CPU& cpu) {}
+    };
+}
+Instruction LD_A_HLinc() {
+    return Instruction {
+        [](CPU& cpu) {
+            Pair HL{cpu.H, cpu.L};
+            cpu.latch.Z = cpu.read_memory(HL.get());
+            HL.set(HL.get()+1);
+        },
+        [](CPU& cpu) {cpu.A = cpu.latch.Z;}
+    };
+}
+Instruction LD_HLinc_A() {
+    return Instruction {
+        [](CPU& cpu) {
+            Pair HL{cpu.H, cpu.L};
+            cpu.write_memory(HL.get(), cpu.A);
+            HL.set(HL.get() + 1);
+        },
+        [](CPU& cpu) {}
+    };
+}
+
+//--------16-bit--------//
+Instruction LD_rr_n16(uint8_t& dest_hi, uint8_t& dest_lo) {
+    return Instruction {
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
+        [&dest_hi, &dest_lo](CPU& cpu) {
+            dest_hi = cpu.latch.W;
+            dest_hi = cpu.latch.Z;
+        }
+    };
+}
+Instruction LD_a16_SP() {
+    return Instruction {
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
+        [](CPU& cpu) {
+            uint16_t addr = cpu.latch.combined();
+            cpu.write_memory(addr, cpu.sp & 0xFF);
+            cpu.latch.set(addr + 1);
+        },
+        [](CPU& cpu) {
+            cpu.write_memory(cpu.latch.combined(), cpu.sp >> 8);
+        },
+        [](CPU& cpu) {}
+    };
+}
+Instruction LD_SP_HL() {
+    return Instruction {
+        [](CPU& cpu) {cpu.sp = pair(cpu.H, cpu.L);},
+        [](CPU& cpu) {}
+    };
+}
+Instruction PUSH_rr(uint8_t& hi, uint8_t& lo) {
+    return Instruction {
+        [](CPU& cpu) {cpu.sp--;},
+        [&hi](CPU& cpu) { 
+            cpu.write_memory(cpu.sp, hi); 
+            cpu.sp--;
+        },
+        [&lo](CPU& cpu) {
+            cpu.write_memory(cpu.sp, lo);
+            cpu.sp--;
+        },
+        [](CPU&) {}
+    };
+}
+Instruction POP_rr(uint8_t& hi, uint8_t& lo) {
+    return Instruction {
+        [](CPU& cpu) {
+            cpu.latch.Z = cpu.read_memory(cpu.sp);
+            cpu.sp++;
+        },
+        [](CPU& cpu) {
+            cpu.latch.W = cpu.read_memory(cpu.sp);
+            cpu.sp++;
+        },
+        [&hi, &lo](CPU& cpu) {
+            hi = cpu.latch.W;
+            lo = cpu.latch.Z;
+        }
+    };
+}
+
+Instruction LD_HL_SPe() {
+    return Instruction {
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [](CPU& cpu) {},
+        [](CPU& cpu) {
+            bool half_carry = ((cpu.sp & 0xF) + (cpu.latch.Z & 0xF)) > 0xF;
+            bool carry = ((cpu.sp & 0xFF) + cpu.latch.Z) > 0xFF;
+            uint16_t result = cpu.sp + static_cast<int8_t>(cpu.latch.Z);
+
+            cpu.set_flag(Flag::ZERO, 0);
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, half_carry);
+            cpu.set_flag(Flag::CARRY, carry);
+            
+            cpu.H = result >> 8;
+        }
     };
 }
 
