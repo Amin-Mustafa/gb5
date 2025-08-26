@@ -18,6 +18,7 @@ public:
     CPU(MMU& mmu, InterruptController& ih);
     ~CPU();
     
+    //cpu clocked in m-cycles (1 m-cycle = 4 t-states)
     void tick() {(this->*current_state)();}
     void print_state();
     void log_state(std::ostream& os);
@@ -35,6 +36,10 @@ public:
     MMU& mmu;
     uint8_t read_memory(uint16_t addr);
     void write_memory(uint16_t addr, uint8_t val);
+    
+    //data transfer made through bus for timing 
+    uint8_t bus_read() const {return data_bus;}
+    void bus_write(uint8_t val) {data_bus = val;}
 private:
     using StateFunction = void (CPU::*)();  //pointer to state function
 
@@ -47,6 +52,7 @@ private:
     void interrupted();
 
     //facilities
+    uint8_t data_bus;
     std::unique_ptr<Decoder> decoder;
     InterruptController& interrupt_controller;
 

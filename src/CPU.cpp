@@ -35,11 +35,11 @@ CPU::CPU(MMU& mmu, InterruptController& interrupt_controller):
 CPU::~CPU() = default;
 
 uint8_t CPU::read_memory(uint16_t addr) {   
-        cycles += 4;    //CPU memory access costs 4 cycles 
+        cycles += 1;    //CPU memory access costs an m-cycle 
         return mmu.read(addr);
     }
 void CPU::write_memory(uint16_t addr, uint8_t val) { 
-    cycles += 4;   
+    cycles += 1;   
     mmu.write(addr, val); 
 }
 
@@ -62,7 +62,7 @@ void CPU::interrupted() {
             //disable IME and clear interrupt request
             IME = false; 
             interrupt_controller.clear(req);
-            cycles += 4;
+            cycles += 1;
 
             push_to_stack(pc);
             jump(interrupt_controller.service_addr(req));
@@ -75,13 +75,13 @@ void CPU::interrupted() {
 
 void CPU::jump(uint16_t addr) {
     pc = addr;
-    cycles += 4;
+    cycles += 1;
 }
 
 void CPU::pc_return() {
     pop_from_stack(pc);
     pc--;
-    cycles += 4;    //cost of jump
+    cycles += 1;    //cost of jump
 }
 
 void CPU::push_to_stack(uint16_t num) {
@@ -89,7 +89,7 @@ void CPU::push_to_stack(uint16_t num) {
     write_memory(sp_val - 1, num >> 8);
 	write_memory(sp_val -2, num & 0xff);
 	sp.set(sp_val - 2);
-    cycles += 4; //pushing costs 4 cycles
+    cycles += 1; //pushing costs 4 cycles
     //total cycle cost = 12
 }
 
@@ -113,7 +113,7 @@ Instruction CPU::JR(const Register8& offset, FlagRegister::ConditionCheck cc) {
             int8_t increment = static_cast<int8_t>(offset.get());
             if(cc(F)) {
                 pc += increment;
-                cycles += 4;    
+                cycles += 1;    
             }
         }
     };
@@ -173,7 +173,7 @@ Instruction CPU::RETI() {
 Instruction CPU::RET_IF(FlagRegister::ConditionCheck cc) {
     return Instruction {
         [cc, this]() {
-            cycles += 4;    //condition check cost
+            cycles += 1;    //condition check cost
             if(cc(F)) pc_return();
         }
     };

@@ -2,21 +2,95 @@
 #include "../include/Register.h"
 #include "../include/Instruction.h"
 #include "../include/Memory/MMU.h"
+#include "../include/CPU.h"
+
 
 namespace Operation {
 
 Instruction NOP() {
-    return Instruction{};
+    return Instruction {
+        [](CPU&){}
+    };  //do nothing
 }
 
-Instruction LD_8(Register8& dest, const Register8& src) {
+Instruction LD_r_r(Register8& dest, const Register8& src) {
     return Instruction { 
-        [&](){dest.set( src.get() );}
+        [&dest, &src](CPU&){ dest.set( src.get() );}
     };
 }
-Instruction LD_16(Register16& dest, const Register16& src) {
+Instruction LD_r_n(Register8& dest) {
     return Instruction {
-        [&](){dest.set( src.get() );}
+        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());}, //M1
+        [&dest](CPU& cpu) {dest.set(cpu.bus_read());}                //M2
+    };
+}
+Instruction LD_r_m(Register8& dest, const MemRegister& mem) {
+    return Instruction {
+        [&mem](CPU& cpu) {cpu.bus_write(mem.get());},    //M1
+        [&dest](CPU& cpu) {dest.set(cpu.bus_read());}            //M2
+    };
+}
+Instruction LD_m_r(Register8& dest, MemRegister& mem) {
+    return Instruction {
+        [&mem, &dest](CPU& cpu) {mem.set(dest.get());},      //M1
+        [](CPU& cpu) {/* dummy */}                     //M2
+    };
+}
+Instruction LD_m_n(MemRegister& mem) {
+    return Instruction {
+        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());},
+        [&mem](CPU& cpu) {mem.set(cpu.bus_read());},
+        [](CPU&){}
+    };
+}
+Instruction LD_A_a16() {
+    return Instruction {
+        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());},  //M1: read lsb of addr
+        [](CPU& cpu) {
+            uint8_t msb = Immediate8(cpu).get();
+            uint16_t addr = ((uint16_t)msb << 8) | cpu.bus_read();
+            cpu.bus_write(cpu.read_memory(addr));
+        },
+        [](CPU&){},
+        [](CPU& cpu) {cpu.A = cpu.bus_read();}
+    };
+}
+Instruction LD_a16_A() {
+    return Instruction {
+        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());},  //M1: read lsb of addr
+        [](CPU& cpu) {},
+        [](CPU& cpu) {
+            uint8_t msb = Immediate8(cpu).get();
+            uint16_t addr = ((uint16_t)msb << 8) | cpu.bus_read();
+            cpu.write_memory(addr, cpu.A);
+        },
+        [](CPU& cpu) {}
+    };
+}
+Instruction LDH_A_C() {
+    return Instruction {
+        [](CPU& cpu) {cpu.bus_write(cpu.read_memory(0xFF00 + cpu.C));},
+        [](CPU& cpu) {cpu.A = cpu.bus_read();}
+    };
+}
+Instruction LDH_C_A(){
+    return Instruction {
+        [](CPU& cpu) {cpu.write_memory(0xFF00 + cpu.C, cpu.A);},
+        [](CPU& cpu) {}
+    };
+}
+Instruction LDH_A_n(){
+    return Instruction {
+        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());},
+        [](CPU& cpu) {cpu.bus_write(0xFF00 + cpu.bus_read());},
+        [](CPU& cpu) {cpu.A = cpu.bus_read();}
+    };
+}
+Instruction LDH_n_A(){
+    return Instruction {
+        [](CPU& cpu) {cpu.bus_write(Immediate8(cpu).get());},
+        [](CPU& cpu) {cpu.write_memory(0xFF00 + cpu.bus_read(), cpu.A)},
+        [](CPU& cpu) {}
     };
 }
 
@@ -49,7 +123,7 @@ Instruction ADD_16(Register16& num1, const Register16& num2, FlagRegister& fr) {
             fr.set_flag(Flag::CARRY, result > 0xffff);
             num1.set(result);
         },
-        4   
+        1   
     };
 } 
 Instruction ADD_SP_e8(StackPointer& sp, const Immediate8& num2, FlagRegister& fr){
@@ -70,7 +144,7 @@ Instruction ADD_SP_e8(StackPointer& sp, const Immediate8& num2, FlagRegister& fr
 
             sp.set(result);
         },
-        8
+        2
     };
     //initial fetch (4) + operand fetch (4) + 16-bit add (4) + stack modification (4)
     //Total cycles: 16

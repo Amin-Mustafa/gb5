@@ -13,23 +13,27 @@ class FlagRegister;
 class StackPointer;
 class Immediate8;
 
+class CPU;
+
 class Instruction {
 public:
-    typedef std::function<void()> Opfn;
+    typedef std::function<void(CPU&)> Opfn;
 
-    Instruction()
-        :op{[](){}} {}  //NOP
-    Instruction(Opfn operation, int duration = 0)
-        :op{std::move(operation)}, cycles{duration} {}
-    
-    void execute() { op(); }
+    Instruction(std::initializer_list<Opfn> sub_ops)
+        :ops{sub_ops} {}
+
+    int length() const {return ops.size();}
+    void execute_subop(CPU& cpu, int index) { ops[index](cpu); }
 private:
-    Opfn op;
-    int cycles;
+    //each instruction is divided into atomic sub-operations
+    //that each take 1 cpu m-cycle
+    std::vector<Opfn> ops; 
 };
 
 namespace Operation {
+
 Instruction NOP();
+
 //------------------------ LOADS ------------------------//
 Instruction LD_8(Register8& dest, const Register8& src);
 Instruction LD_16(Register16& dest, const Register16& src);
