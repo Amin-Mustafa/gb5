@@ -17,9 +17,9 @@ class CPU;
 
 class Instruction {
 public:
-    typedef std::function<void(CPU&)> Opfn;
+    typedef std::function<void(CPU&)> MicroOp;
 
-    Instruction(std::initializer_list<Opfn> sub_ops)
+    Instruction(std::initializer_list<MicroOp> sub_ops)
         :ops{sub_ops} {}
 
     int length() const {return ops.size();}
@@ -27,7 +27,7 @@ public:
 private:
     //each instruction is divided into atomic sub-operations
     //that each take 1 cpu m-cycle
-    std::vector<Opfn> ops; 
+    std::vector<MicroOp> ops; 
 };
 
 namespace Operation {

@@ -17,7 +17,91 @@ struct Pair {
     }
 };
 
+uint8_t flag_state(bool z, bool n, bool h, bool c){
+    return (z << 7) | (n << 6) | (h << 5) | (c << 4);
+}
+
 namespace Operation {
+
+    namespace ALU {
+        //primitive arithmetic and logic micro ops
+        void add_8(CPU& cpu, uint8_t num) {
+            uint16_t result = cpu.A + num;
+
+            cpu.set_flag(Flag::ZERO, (result&0xff) == 0);
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.A, num));
+            cpu.set_flag(Flag::CARRY, result > 0xff);
+
+            cpu.A = result & 0xff;
+        }
+        void adc_8(CPU& cpu, uint8_t num) {
+            bool c = cpu.get_flag(Flag::CARRY);
+            uint16_t result = cpu.A + num + c;
+
+            cpu.set_flag(Flag::ZERO, (result&0xff) == 0);
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.A, num, c));
+            cpu.set_flag(Flag::CARRY, result > 0xff);
+
+            cpu.A = result & 0xff;
+        }
+        void sub_8(CPU& cpu, uint8_t num) {
+            uint16_t result = cpu.A - num;
+
+            cpu.set_flag(Flag::ZERO, (result&0xff) == 0);
+            cpu.set_flag(Flag::NEGATIVE, 1);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub_8(cpu.A, num));
+            cpu.set_flag(Flag::CARRY, num > cpu.A);
+
+            cpu.A = result & 0xff;
+        }
+        void sbc_8(CPU& cpu, uint8_t num) {
+            bool c = cpu.get_flag(Flag::CARRY);
+            uint16_t result = cpu.A - num - c;
+
+            cpu.set_flag(Flag::ZERO, (result&0xff) == 0);
+            cpu.set_flag(Flag::NEGATIVE, 1);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub_8(cpu.A, num, c));
+            cpu.set_flag(Flag::CARRY, num + c > cpu.A);
+
+            cpu.A = result & 0xff;
+        }
+        void cp_8(CPU& cpu, uint8_t num) {
+            uint16_t result = cpu.A - num;
+
+            cpu.set_flag(Flag::ZERO, (result&0xff) == 0);
+            cpu.set_flag(Flag::NEGATIVE, 1);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub_8(cpu.A, num));
+            cpu.set_flag(Flag::CARRY, num > cpu.A);
+        }
+        void inc_8(CPU& cpu, uint8_t& num) {
+            uint16_t result = num + 1;
+            cpu.set_flag(Flag::ZERO, (result&0xff) == 0);
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(num, 1));
+            num = result & 0xff;
+        }
+        void dec_8(CPU& cpu, uint8_t& num) {
+            uint16_t result = num - 1;
+            cpu.set_flag(Flag::ZERO, (result&0xff) == 0);
+            cpu.set_flag(Flag::NEGATIVE, 1);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub_8(num, 1));
+            num = result&0xff;
+        }
+        void and_8(CPU& cpu, uint8_t num) {
+            cpu.A = cpu.A & num;
+            cpu.F &= flag_state(cpu.A == 0, 0, 1, 0);
+        }
+        void or_8(CPU& cpu, uint8_t num) {
+            cpu.A = cpu.A | num;
+            cpu.F &= flag_state(cpu.A == 0, 0, 0, 0);
+        }
+        void xor_8(CPU& cpu, uint8_t num) {
+            cpu.A = cpu.A ^ num;
+            cpu.F &= flag_state(cpu.A == 0, 0, 0, 0);
+        }
+    }
 
 Instruction NOP() {
     return Instruction {
@@ -29,31 +113,37 @@ Instruction NOP() {
 //------8-bit------//
 Instruction LD_r_r(uint8_t& dest, const uint8_t& src) {
     return Instruction { 
-        [&dest, src](CPU&){ dest = src;}
+        [&dest, &src](CPU&){ dest = src;}
     };
 }
 Instruction LD_r_n(uint8_t& dest) {
     return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();}, //M1
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},        //M1
         [&dest](CPU& cpu) {dest = cpu.latch.Z;}                //M2
     };
 }
-Instruction LD_r_m(uint8_t& dest, uint16_t addr) {
+Instruction LD_r_m(uint8_t& dest, uint8_t& src_hi, uint8_t& src_lo) {
     return Instruction {
-        [addr](CPU& cpu) {cpu.latch.Z = cpu.read_memory(addr);},    //M1
+        [&src_hi, &src_lo](CPU& cpu) {
+            cpu.latch.Z = cpu.read_memory(pair(src_hi, src_lo));
+        },    //M1
         [&dest](CPU& cpu) {dest = cpu.latch.Z;}            //M2
     };
 }
-Instruction LD_m_r(uint16_t addr, uint8_t src) {
+Instruction LD_m_r(uint8_t& dest_hi, uint8_t& dest_lo, uint8_t& src) {
     return Instruction {
-        [addr, src](CPU& cpu) {cpu.write_memory(addr, src);},      //M1
+        [&dest_hi, &dest_lo, &src](CPU& cpu) {
+            cpu.write_memory(pair(dest_hi, dest_lo), src);
+        },      //M1
         [](CPU& cpu) {/* dummy */}                     //M2
     };
 }
-Instruction LD_m_n(uint16_t addr) {
+Instruction LD_m_n(uint8_t& dest_hi, uint8_t& dest_lo) {
     return Instruction {
         [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [addr](CPU& cpu) {cpu.write_memory(addr, cpu.latch.Z);},
+        [&dest_hi, &dest_lo](CPU& cpu) {
+            cpu.write_memory(pair(dest_hi, dest_lo), cpu.latch.Z);
+        },
         [](CPU&){}
     };
 }
@@ -222,7 +312,99 @@ Instruction LD_HL_SPe() {
     };
 }
 
-//------------------- ARITHMETIC -------------------//
+//------------------- ARITHMETIC and LOGIC -------------------//
+//generic 8-bit ALU op
+using MathOp = void(*)(CPU& cpu, uint8_t reg);
+
+Instruction ALU_Inst_r(MathOp op, const uint8_t& reg) {
+    return Instruction {
+        [&op, &reg](CPU& cpu) { op(cpu, reg); }
+    };
+}
+Instruction ALU_Inst_m(MathOp op) {
+    return Instruction { 
+        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
+        [&op](CPU& cpu) {op(cpu, cpu.latch.Z);}
+    };
+}
+Instruction ALU_Inst_m(MathOp op) {
+    return Instruction { 
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [&op](CPU& cpu) {op(cpu, cpu.latch.Z);}
+    };
+}
+
+Instruction INC_r(uint8_t& reg) {
+    return Instruction { 
+        [&reg](CPU& cpu) {ALU::inc_8(cpu, reg); }
+    };
+}
+Instruction INC_m() {
+    return Instruction { 
+        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
+        [](CPU& cpu) {ALU::inc_8(cpu, cpu.latch.Z);}
+    };
+}
+Instruction INC_n() {
+    return Instruction { 
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [](CPU& cpu) {ALU::inc_8(cpu, cpu.latch.Z);}
+    };
+}
+Instruction DEC_r(uint8_t& reg) {
+    return Instruction { 
+        [&reg](CPU& cpu) {ALU::dec_8(cpu, reg); }
+    };
+}
+Instruction DEC_m() {
+    return Instruction { 
+        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
+        [](CPU& cpu) {ALU::dec_8(cpu, cpu.latch.Z);}
+    };
+}
+Instruction DEC_n() {
+    return Instruction { 
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [](CPU& cpu) {ALU::dec_8(cpu, cpu.latch.Z);}
+    };
+}
+Instruction CCF(){
+    return Instruction {
+        [](CPU& cpu) {
+            cpu.set_flag(Flag::CARRY, !cpu.get_flag(Flag::CARRY));
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, 0);
+        }
+    };
+}
+
+Instruction SCF(){
+    return Instruction {
+        [](CPU& cpu) {
+            cpu.set_flag(Flag::CARRY, 1);
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, 0);
+        }
+    };
+}
+
+Instruction DAA(){
+    return Instruction{
+        [](CPU& cpu) {/*TODO*/}
+    };
+}
+
+Instruction CPL() {
+    return Instruction {
+        [](CPU& cpu) {
+            cpu.A = ~cpu.A;
+            cpu.set_flag(Flag::NEGATIVE, 1);
+            cpu.set_flag(Flag::HALF_CARRY, 1);
+        }
+    };
+}
+
+//--------16-bit--------//
 Instruction INC_16(Register16& rp) {
     return Instruction {
         [&](){ rp.set(rp.get() + 1); }
@@ -277,36 +459,6 @@ Instruction ADD_SP_e8(StackPointer& sp, const Immediate8& num2, FlagRegister& fr
     //initial fetch (4) + operand fetch (4) + 16-bit add (4) + stack modification (4)
     //Total cycles: 16
 }
-Instruction ADD_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
-    return Instruction { 
-        [&](){ 
-            uint8_t a = num1.get();
-            uint8_t b = num2.get();
-            uint16_t result = a + b;
-            fr.set_flag(Flag::ZERO, (result&0xff) == 0);
-            fr.set_flag(Flag::NEGATIVE, 0);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(a, b));
-            fr.set_flag(Flag::CARRY, result > 0xff);
-            num1.set(result & 0xff);
-        }
-    };
-}
-Instruction ADC_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
-   return Instruction { 
-        [&](){ 
-            bool c = fr.get_flag(Flag::CARRY);
-            uint8_t a = num1.get();
-            uint8_t b = num2.get();
-            uint16_t result = a + b + c;
-            fr.set_flag(Flag::ZERO, (result&0xff) == 0);
-            fr.set_flag(Flag::NEGATIVE, 0);
-            fr.set_flag(Flag::HALF_CARRY, ((a & 0xF) + (b & 0xF) + c) > 0xF);
-            fr.set_flag(Flag::CARRY, result > 0xff);
-            num1.set(result & 0xff);
-        }
-    };
-}
-
 Instruction SUB_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
     return Instruction { 
         [&](){

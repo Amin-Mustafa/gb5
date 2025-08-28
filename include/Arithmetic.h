@@ -4,16 +4,16 @@
 #include <cstdint>
 
 namespace Arithmetic {
-inline bool half_carry_add_8(uint8_t a, uint8_t b) {
-    return ((a & 0xF) + (b & 0xF)) & 0x10;
+inline bool half_carry_add_8(uint8_t a, uint8_t b, bool carry = 0) {
+    return ((a & 0xF) + (b & 0xF) + carry) > 0xF;
 }
 
 inline bool half_carry_add_16(uint16_t a, uint16_t b) {
     return ((a & 0x0FFF) + (b & 0x0FFF)) & 0x1000;
 }
 
-inline bool half_carry_sub_8(uint8_t a, uint8_t b) {
-    return (a & 0xF) < (b & 0xF);
+inline bool half_carry_sub_8(uint8_t a, uint8_t b, bool carry = 0) {
+    return ((a & 0xF) - (b & 0xF) - carry) < 0;
 }
 
 inline bool half_carry_sub_16(uint16_t a, uint16_t b) {
