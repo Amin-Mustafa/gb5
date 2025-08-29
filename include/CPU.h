@@ -41,12 +41,16 @@ public: //methods
         return (F >> (int)fl) & (uint8_t)1;
     }
 
+    //skip to end of instruction
+    void skip_inst() {skip_to_inst_end = true;}
+
 public: //data
     //program counter and stack pointer
     uint16_t pc;    
     uint16_t sp;
     //data registers
     uint8_t A, B, C, D, E, H, L, F;
+    bool IME;
 
     struct {
         uint8_t W, Z;
@@ -58,7 +62,6 @@ private:
     using StateFunction = void (CPU::*)();  //pointer to state function
 
     int cycles;
-    bool IME;
 
     //CPU states
     StateFunction current_state;
@@ -69,6 +72,7 @@ private:
     MMU& mmu;
     std::unique_ptr<Decoder> decoder;
     InterruptController& interrupt_controller;
+    bool skip_to_inst_end = false;
 };
 
 #endif

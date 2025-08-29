@@ -101,7 +101,7 @@ namespace Operation {
             cpu.A = cpu.A ^ num;
             cpu.F &= flag_state(cpu.A == 0, 0, 0, 0);
         }
-    }
+    } //ALU
 
 Instruction NOP() {
     return Instruction {
@@ -308,14 +308,13 @@ Instruction LD_HL_SPe() {
             cpu.set_flag(Flag::CARRY, carry);
             
             cpu.H = result >> 8;
+            cpu.L = result & 0xff;
         }
     };
 }
 
 //------------------- ARITHMETIC and LOGIC -------------------//
 //generic 8-bit ALU op
-using MathOp = void(*)(CPU& cpu, uint8_t reg);
-
 Instruction ALU_Inst_r(MathOp op, const uint8_t& reg) {
     return Instruction {
         [&op, &reg](CPU& cpu) { op(cpu, reg); }
@@ -368,7 +367,7 @@ Instruction DEC_n() {
         [](CPU& cpu) {ALU::dec_8(cpu, cpu.latch.Z);}
     };
 }
-Instruction CCF(){
+Instruction CCF() {
     return Instruction {
         [](CPU& cpu) {
             cpu.set_flag(Flag::CARRY, !cpu.get_flag(Flag::CARRY));
@@ -378,7 +377,7 @@ Instruction CCF(){
     };
 }
 
-Instruction SCF(){
+Instruction SCF() {
     return Instruction {
         [](CPU& cpu) {
             cpu.set_flag(Flag::CARRY, 1);
@@ -388,7 +387,7 @@ Instruction SCF(){
     };
 }
 
-Instruction DAA(){
+Instruction DAA() {
     return Instruction{
         [](CPU& cpu) {/*TODO*/}
     };
@@ -405,252 +404,301 @@ Instruction CPL() {
 }
 
 //--------16-bit--------//
-Instruction INC_16(Register16& rp) {
+Instruction INC_rr(uint8_t& reg1, uint8_t& reg2) {
     return Instruction {
-        [&](){ rp.set(rp.get() + 1); }
-    };
-}
-Instruction INC_8(Register8& num, FlagRegister& fr) {
-    return Instruction{ 
-        [&](){
-            uint8_t val = num.get();
-            uint16_t result = val + 1;
-            fr.set_flag(Flag::ZERO, (result&0xff) == 0);
-            fr.set_flag(Flag::NEGATIVE, 0);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(val, 1));
-            num.set(result&0xff);
-        }
-    };
-}
-Instruction ADD_16(Register16& num1, const Register16& num2, FlagRegister& fr) {
-    return Instruction{
-        [&]() {
-            uint16_t a = num1.get();
-            uint16_t b = num2.get();
-            int result = a + b;
-            fr.set_flag(Flag::NEGATIVE, 0);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_16(a, b));
-            fr.set_flag(Flag::CARRY, result > 0xffff);
-            num1.set(result);
+        [&reg1, &reg2](CPU&) { 
+            Pair pair{reg1, reg2};
+            pair.set(pair.get() + 1);
         },
-        1   
-    };
-} 
-Instruction ADD_SP_e8(StackPointer& sp, const Immediate8& num2, FlagRegister& fr){
-    return Instruction{
-        [&]() {
-            uint16_t a = sp.get();
-            uint8_t ue = num2.get();    //"raw" unsigned num2
-            int8_t e = static_cast<int8_t>(ue); // signed displacement
-            uint16_t result = a + e; 
-
-            bool half_carry = ((a & 0xF) + (ue & 0xF)) > 0xF;
-            bool carry = ((a & 0xFF) + ue) > 0xFF;
-
-            fr.set_flag(Flag::ZERO, 0);
-            fr.set_flag(Flag::NEGATIVE, 0);
-            fr.set_flag(Flag::HALF_CARRY, half_carry);
-            fr.set_flag(Flag::CARRY, carry);
-
-            sp.set(result);
-        },
-        2
-    };
-    //initial fetch (4) + operand fetch (4) + 16-bit add (4) + stack modification (4)
-    //Total cycles: 16
-}
-Instruction SUB_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
-    return Instruction { 
-        [&](){
-            uint8_t a = num1.get();
-            uint8_t b = num2.get();
-            uint16_t result = a - b;
-            fr.set_flag(Flag::ZERO, (result&0xff) == 0);
-            fr.set_flag(Flag::NEGATIVE, 1);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub_8(a, b));
-            fr.set_flag(Flag::CARRY, b > a);
-            num1.set(result & 0xff);
-        }
+        [](CPU&) {}
     };
 }
-Instruction SBC_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
-    return Instruction { 
-        [&](){
-            uint8_t a = num1.get();
-            uint8_t b = num2.get();
-            bool c = fr.get_flag(Flag::CARRY);
-            uint16_t result = a - b - c;
-            fr.set_flag(Flag::ZERO, (result&0xff) == 0);
-            fr.set_flag(Flag::NEGATIVE, 1);
-            fr.set_flag(Flag::HALF_CARRY, ((a & 0xF) - (b & 0xF) - c) < 0);
-            fr.set_flag(Flag::CARRY, b + c > a);
-            num1.set(result & 0xff);
-        }
-    };
-}
-Instruction DEC_8(Register8& num, FlagRegister& fr){
-    return Instruction{ 
-        [&](){
-            uint16_t result = num.get() - 1;
-            fr.set_flag(Flag::ZERO, (result&0xff) == 0);
-            fr.set_flag(Flag::NEGATIVE, 1);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub_8(num.get(), 1));
-            num.set(result&0xff);
-        }
-    };
-}
-Instruction DEC_16(Register16& rp) {
-    return Instruction{
-        [&](){
-            rp.set(rp.get() - 1);
-        }
-    };
-}     
-//------------------LOGICAL------------------//
-Instruction AND_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
-    return Instruction{
-        [&](){
-            num1.set(num1.get() & num2.get());
-            fr = flag_state(num1.get() == 0, 0, 1, 0);
-        }
-    };
-}
-Instruction OR_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
-    return Instruction{
-        [&](){
-            num1.set(num1.get() | num2.get());
-            fr = flag_state(num1.get() == 0, 0, 0, 0);
-        }
-    };
-}
-
-Instruction XOR_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
-    return Instruction{
-        [&](){
-            num1.set(num1.get() ^ num2.get());
-            fr = flag_state(num1.get() == 0, 0, 0, 0);
-        }
-    };
-}
-Instruction CP_8(Register8& num1, const Register8& num2, FlagRegister& fr) {
-    return Instruction { 
-        [&](){
-            uint8_t a = num1.get();
-            uint8_t b = num2.get();
-            uint16_t result = a - b;
-            fr.set_flag(Flag::ZERO, (result&0xff) == 0);
-            fr.set_flag(Flag::NEGATIVE, 1);
-            fr.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_sub_8(a, b));
-            fr.set_flag(Flag::CARRY, b > a);
-            //no set
-        } 
-    };
-}
-
-//----------------------PREFIX OPS---------------------//
-Instruction RLC(Register8& num, FlagRegister& fr){
-    return Instruction{
-        [&]() {
-            bool carry = fr.get_flag(Flag::CARRY);
-            uint8_t result = Arithmetic::rot_left_circ(num.get(), carry);
-            fr.set(flag_state(!result, 0, 0, carry));
-            num.set(result);
-        }
-    };
-}
-Instruction RRC(Register8& num, FlagRegister& fr){ 
-    return Instruction{
-        [&]() {
-            bool carry = fr.get_flag(Flag::CARRY);
-            uint8_t result = Arithmetic::rot_right_circ(num.get(), carry);
-            fr.set(flag_state(!result, 0, 0, carry));
-            num.set(result);
-        }
-    };
-}
-Instruction RL(Register8& num, FlagRegister& fr) {
-    return Instruction{
-        [&]() {
-            bool carry = fr.get_flag(Flag::CARRY);
-            uint8_t result = Arithmetic::rot_left(num.get(), carry);
-            fr.set(flag_state(!result, 0, 0, carry));
-            num.set(result);
-        }
-    };
-}
-Instruction RR(Register8& num, FlagRegister& fr) {
-    return Instruction{
-        [&]() {
-            bool carry = fr.get_flag(Flag::CARRY);
-            uint8_t result = Arithmetic::rot_right(num.get(), carry);
-            fr.set(flag_state(!result, 0, 0, carry));
-            num.set(result);
-        }
-    };
-}
-Instruction SLA(Register8& num, FlagRegister& fr) {
-    return Instruction{
-        [&]() {
-            bool carry = fr.get_flag(Flag::CARRY);
-            uint8_t result = Arithmetic::shift_left_arithmetic(num.get(), carry);
-            fr.set(flag_state(!result, 0, 0, carry));
-            num.set(result);
-        }
-    };
-}
-Instruction SRA(Register8& num, FlagRegister& fr){ 
-    return Instruction{
-        [&]() {
-            bool carry = fr.get_flag(Flag::CARRY);
-            uint8_t result = Arithmetic::shift_right_arithmetic(num.get(), carry);
-            fr.set(flag_state(!result, 0, 0, carry));
-            num.set(result);
-        }
-    };
-}
-Instruction SRL(Register8& num, FlagRegister& fr) {
-    return Instruction{
-        [&]() {
-            bool carry = fr.get_flag(Flag::CARRY);
-            uint8_t result = Arithmetic::shift_right_logical(num.get(), carry);
-            fr.set(flag_state(!result, 0, 0, carry));
-            num.set(result);
-        }
-    };
-}
-Instruction SWAP(Register8& num, FlagRegister& fr) {
-    return Instruction{
-        [&](){
-            uint8_t x = Arithmetic::swap_nibs(num.get());
-            fr.set(flag_state(x == 0, 0, 0, 0));
-            num.set(x);
-        }
-    };
-}
-Instruction BIT(Register8& num, uint8_t bit, FlagRegister& fr) {
+Instruction DEC_rr(uint8_t& reg1, uint8_t& reg2) {
     return Instruction {
-        [&](){
-            bool bit_is_set = Arithmetic::bit_check(num.get(), bit);
-            fr.set_flag(Flag::ZERO, bit_is_set);
-            fr.set_flag(Flag::NEGATIVE, 0);
-            fr.set_flag(Flag::HALF_CARRY, 1);
+        [&reg1, &reg2](CPU&) { 
+            Pair pair{reg1, reg2};
+            pair.set(pair.get() - 1);
+        },
+        [](CPU&) {}
+    };
+}
+Instruction ADD_HL_rr(uint8_t& reg1, uint8_t& reg2) {
+    return Instruction{
+        [&reg2](CPU& cpu) {
+            uint16_t L_added = cpu.L + reg2;
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.L, reg2));
+            cpu.set_flag(Flag::CARRY, L_added > 0xff);
+            cpu.L = L_added & 0xff;
+        },
+        [&reg1](CPU& cpu) {
+            bool carry = cpu.get_flag(Flag::CARRY);
+            uint16_t H_added = cpu.H + reg1 + carry;
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.H, reg1, carry));
+            cpu.set_flag(Flag::CARRY, H_added > 0xff);
         }
     };
 }
-Instruction RES(Register8& num, uint8_t bit) {
-    return Instruction{
-        [&]() {
-            uint8_t x = Arithmetic::bit_clear(num.get(), bit);
-            num.set(x);
+Instruction ADD_SPe() {
+    return Instruction {
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [](CPU& cpu) {},
+        [](CPU& cpu) {
+            bool half_carry = ((cpu.sp & 0xF) + (cpu.latch.Z & 0xF)) > 0xF;
+            bool carry = ((cpu.sp & 0xFF) + cpu.latch.Z) > 0xFF;
+            uint16_t result = cpu.sp + static_cast<int8_t>(cpu.latch.Z);
+
+            cpu.set_flag(Flag::ZERO, 0);
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, half_carry);
+            cpu.set_flag(Flag::CARRY, carry);
+            
+            cpu.latch.set(result);
+        },
+        [](CPU& cpu) {cpu.sp = cpu.latch.combined();}
+    };
+}
+
+//----------------------ROTATE, SHIFT, BIT----------------------//
+using RotFunc = uint8_t(*)(uint8_t num, bool& carry); //rot/shift function
+//-------Accumulator-------//
+Instruction ROT_Inst_A(RotFunc func) {
+    return Instruction {
+        [&func](CPU& cpu) {
+            bool carry = cpu.get_flag(Flag::CARRY);
+            cpu.A = Arithmetic::rot_left_circ(cpu.A, carry);
+            cpu.F = flag_state(!cpu.A, 0, 0, carry);
         }
     };
 }
-Instruction SET(Register8& num, uint8_t bit) {
-    return Instruction{
-        [&](){
-            uint8_t x = Arithmetic::bit_set(num.get(), bit);
-            num.set(x);
+//-------PREFIX ops--------//
+//all PREFIX ops have an extra fetch cycle
+Instruction ROT_Inst_r(RotFunc func, uint8_t& reg) {
+    return Instruction {
+        [](CPU& cpu) {cpu.fetch_byte();},    
+        [&func, &reg](CPU& cpu) {
+            bool carry = cpu.get_flag(Flag::CARRY);
+            reg = Arithmetic::rot_left_circ(reg, carry);
+            cpu.F = flag_state(!reg, 0, 0, carry);
         }
+    };
+}
+Instruction ROT_Inst_m(RotFunc func) {
+    return Instruction {
+        [](CPU& cpu) {cpu.fetch_byte();},    
+        [](CPU& cpu) {
+            cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));
+        },
+        [&func](CPU& cpu) {
+            bool carry = cpu.get_flag(Flag::CARRY);
+            uint8_t result = func(cpu.latch.Z, carry);
+            cpu.write_memory(pair(cpu.H, cpu.L), result);
+        },
+        [](CPU& cpu) {}
+    };
+}
+
+Instruction BIT_r(uint8_t& reg, uint8_t bit) {
+    return Instruction {
+        [](CPU& cpu) {cpu.fetch_byte();},
+        [&reg, bit](CPU& cpu) {
+            bool bit_is_set = Arithmetic::bit_check(reg, bit);
+            cpu.set_flag(Flag::ZERO, bit_is_set);
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, 1);
+        }
+    };
+}
+Instruction BIT_m(uint8_t bit) {
+    return Instruction {
+        [](CPU& cpu) {cpu.fetch_byte();},
+        [](CPU& cpu) {
+            cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));
+        },
+        [bit](CPU& cpu) {
+            bool bit_is_set = Arithmetic::bit_check(cpu.latch.Z, bit);
+            cpu.set_flag(Flag::ZERO, bit_is_set);
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, 1);
+        }
+    };
+}
+Instruction SWAP_r(uint8_t& reg) {
+    return Instruction{
+        [](CPU& cpu) {cpu.fetch_byte();},
+        [&reg](CPU& cpu){
+            reg = Arithmetic::swap_nibs(reg);
+            cpu.F = flag_state(reg == 0, 0, 0, 0);
+        }
+    };
+}
+Instruction SWAP_m() {
+    return Instruction{
+        [](CPU& cpu) {cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
+        [](CPU& cpu){
+            cpu.latch.Z = Arithmetic::swap_nibs(cpu.latch.Z);
+            cpu.F = flag_state(cpu.latch.Z == 0, 0, 0, 0);
+        },
+        [](CPU& cpu){
+            cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);
+        }
+    };
+}
+Instruction SET_r(uint8_t& reg, uint8_t bit) {
+    return Instruction {
+        [](CPU& cpu) {cpu.fetch_byte();},
+        [&reg, bit](CPU& cpu) {reg = Arithmetic::bit_set(reg, bit);}
+    };
+}
+Instruction SET_m(uint8_t bit) {
+    return Instruction {
+        [](CPU& cpu) {cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
+        [bit](CPU& cpu) {cpu.latch.Z = Arithmetic::bit_set(cpu.latch.Z, bit);},
+        [](CPU& cpu) {cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);}
+    };
+}
+
+Instruction CLR_r(uint8_t& reg, uint8_t bit) {
+    return Instruction {
+        [](CPU& cpu) {cpu.fetch_byte();},
+        [&reg, bit](CPU& cpu) {reg = Arithmetic::bit_clear(reg, bit);}
+    };
+}
+
+Instruction CLR_m(uint8_t bit) {
+    return Instruction {
+        [](CPU& cpu) {cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
+        [bit](CPU& cpu) {cpu.latch.Z = Arithmetic::bit_clear(cpu.latch.Z, bit);},
+        [](CPU& cpu) {cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);}
+    };
+}
+
+//----------------------CONTROL FLOW--------------------//
+using ConditionCheck = bool(*)(const uint8_t& flags);
+Instruction JP(ConditionCheck cc) {
+    return Instruction {
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [&cc](CPU& cpu) {
+            cpu.latch.W = cpu.fetch_byte();
+            if(!cc(cpu.F)) cpu.skip_inst();
+        },
+        [](CPU& cpu) {cpu.pc = cpu.latch.combined() - 1;},
+        [](CPU& cpu) {}
+    };
+}
+Instruction JPHL(){
+    return Instruction{
+        [](CPU& cpu) {cpu.pc = pair(cpu.H, cpu.L) - 1;}
+    };
+}
+Instruction JR(ConditionCheck cc) {
+    return Instruction {
+        [&cc](CPU& cpu) {
+            cpu.latch.Z = cpu.fetch_byte();
+            if(!cc(cpu.F)) cpu.skip_inst();
+        },
+        [](CPU& cpu) {
+            int8_t offset = static_cast<int8_t>(cpu.latch.Z);
+            cpu.latch.set(cpu.pc + offset);
+        },
+        [](CPU& cpu) {cpu.pc = cpu.latch.combined();}
+    };
+}
+Instruction CALL(ConditionCheck cc){
+    return Instruction {
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [&cc](CPU& cpu) {
+            cpu.latch.W = cpu.fetch_byte();
+            if(!cc(cpu.F)) cpu.skip_inst();
+        },
+        [](CPU& cpu) {cpu.sp--;},
+        [](CPU& cpu) {
+            cpu.write_memory(cpu.sp, (cpu.pc+1) >> 8);
+            cpu.sp--;
+        },
+        [](CPU& cpu) {
+            cpu.write_memory(cpu.sp, (cpu.pc+1) & 0xff);
+            cpu.pc = cpu.latch.combined() - 1;
+        },
+        [](CPU&){}
+    };
+}
+Instruction RET(){ 
+    //absolute return takes 4 cycles,
+    //conditional return takes 5 cycles if condition is true
+    return Instruction{
+        [](CPU& cpu) {
+            cpu.latch.Z = cpu.read_memory(cpu.sp);
+            cpu.sp++;
+        },
+        [](CPU& cpu) {
+            cpu.latch.W = cpu.read_memory(cpu.sp);
+            cpu.sp++;
+        },
+        [](CPU& cpu) {
+            cpu.pc = cpu.latch.combined() - 1;
+        },
+        [](CPU& cpu) {}
+    };
+}
+Instruction RET_IF(ConditionCheck cc) {
+    //unlike conditional CALL, JP, JR, conditional RET has 
+    //a dedicated cycle just for condition check
+    return Instruction {
+        [&cc](CPU& cpu) {
+            if(!cc(cpu.F)) cpu.skip_inst();
+        },
+        [](CPU& cpu) {
+            cpu.latch.Z = cpu.read_memory(cpu.sp);
+            cpu.sp++;
+        },
+        [](CPU& cpu) {
+            cpu.latch.W = cpu.read_memory(cpu.sp);
+            cpu.sp++;
+        },
+        [](CPU& cpu) {
+            cpu.pc = cpu.latch.combined() - 1;
+        },
+        [](CPU& cpu) {}
+    };
+}
+
+Instruction RETI() {
+    return Instruction{
+        [](CPU& cpu) {
+            cpu.latch.Z = cpu.read_memory(cpu.sp);
+            cpu.sp++;
+        },
+        [](CPU& cpu) {
+            cpu.latch.W = cpu.read_memory(cpu.sp);
+            cpu.sp++;
+        },
+        [](CPU& cpu) {
+            cpu.pc = cpu.latch.combined() - 1;
+            cpu.IME = true;
+        },
+        [](CPU& cpu) {}
+    };
+}
+
+Instruction RST(uint8_t addr) {
+    //CALL to fixed 1-byte address
+    return Instruction {
+        [](CPU& cpu) {cpu.sp--;},
+        [](CPU& cpu) {
+            cpu.write_memory(cpu.sp, (cpu.pc + 1) >> 8);
+            cpu.sp--;
+        },
+        [addr](CPU& cpu) {
+            cpu.write_memory(cpu.sp, (cpu.pc + 1) & 0xff);
+            cpu.sp--;
+            cpu.pc = addr - 1;
+        },
+        [](CPU& cpu) {}
     };
 }
 

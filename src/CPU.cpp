@@ -47,33 +47,7 @@ uint8_t CPU::fetch_byte() {
 }
 
 void CPU::fetch_and_execute() {
-    Instruction inst = decoder->decode(read_memory(pc));
-    inst.execute();
-    pc++;
 
-    //check for interrupts before going to the next instruction
-    if(IME && interrupt_controller.active()) {
-        current_state = interrupted;
-    }
-}
-
-
-void CPU::interrupted() {  
-    for(int i = 0; i < InterruptController::num_interrupts; ++i) {
-        auto req = static_cast<InterruptController::Interrupt>(i);
-        if(interrupt_controller.requested(req)) {
-            //disable IME and clear interrupt request
-            IME = false; 
-            interrupt_controller.clear(req);
-            cycles += 1;
-
-            push_to_stack(pc);
-            jump(interrupt_controller.service_addr(req));
-
-            current_state = fetch_and_execute;
-            return;
-        }
-    }
 }
 
 void CPU::print_state(){

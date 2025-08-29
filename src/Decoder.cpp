@@ -6,80 +6,42 @@
 using std::ref;
 using namespace Operation;
 
-bool NZ(const FlagRegister& f) {return !f.get_flag(Flag::ZERO);}
-bool Z(const FlagRegister& f)  { return f.get_flag(Flag::ZERO); }
-bool NC(const FlagRegister& f) {return !f.get_flag(Flag::CARRY);}
-bool C(const FlagRegister& f)  {return f.get_flag(Flag::CARRY);}
+bool NZ(const uint8_t& f) {return !Arithmetic::bit_check(f, (int)Flag::ZERO);}
+bool Z (const uint8_t& f) {return  Arithmetic::bit_check(f, (int)Flag::ZERO);}
+bool NC(const uint8_t& f) {return !Arithmetic::bit_check(f, (int)Flag::CARRY);}
+bool C (const uint8_t& f) {return  Arithmetic::bit_check(f, (int)Flag::CARRY);}
+bool no_cond(const uint8_t& f) {return true;}
+
 
 Decoder::Decoder(CPU& cpu)
-    :cpu{cpu},
-    regs {
-        std::ref(cpu.B), std::ref(cpu.C), std::ref(cpu.D), std::ref(cpu.E), 
-        std::ref(cpu.H), std::ref(cpu.L), std::ref(cpu.M), std::ref(cpu.A)
-    },
-    alu_ops {
-        ADD_8, ADC_8, SUB_8, SBC_8, AND_8, XOR_8, OR_8, CP_8
-    },
-    shift_ops {
-        RLC, RRC, RL, RR, SLA, SRA, SWAP, SRL
-    },
-    BC{RegisterPair{cpu.B, cpu.C}},
-    DE{RegisterPair{cpu.D, cpu.E}},
-    HL{RegisterPair{cpu.H, cpu.L}},
-    AF{RegisterPair{cpu.A, cpu.F}},
-    BC_mem{MemRegister{cpu, cpu.B, cpu.C}},
-    DE_mem{MemRegister{cpu, cpu.D, cpu.E}},
-    imm8{Immediate8(cpu)},
-    imm16{Immediate16(cpu)},
-    h_mem{HighMemory(cpu)}
     {
-        init_instruction_table();
-        init_cb_table();
+        init_instruction_table(cpu);
+        init_cb_table(cpu);
     }
 
 Instruction Decoder::decode(uint8_t opcode) {
     return inst_table[opcode];
 }
 
-void Decoder::init_instruction_table() {
+void Decoder::init_instruction_table(CPU& cpu) {
     using namespace Operation;
 
     inst_table[0x00] = NOP();
-    inst_table[0x01] = LD_16(BC, imm16);
-    inst_table[0x02] = LD_8(BC_mem, cpu.A);
-    inst_table[0x03] = INC_16(BC);
-    inst_table[0x04] = INC_8(cpu.B, cpu.F);
-    inst_table[0x05] = DEC_8(cpu.B, cpu.F);
-    inst_table[0x06] = LD_8(cpu.B, imm8);
-    inst_table[0x07] = Instruction {
-        [&]() {
-            RLC(cpu.A, cpu.F).execute();
-            cpu.F.set_flag(Flag::ZERO, 0);
-        }
-    };
-    inst_table[0x08] = Instruction {
-        [&]() {
-            uint16_t addr = imm16.get();
-            uint16_t sp_val = cpu.sp.get();
-            cpu.write_memory(addr, sp_val & 0xff);  //write LSB
-            addr++;
-            cpu.write_memory(addr, sp_val >> 8);    //write MSB
-        }
-        //cycles: initial fetch (4) + 2 operand fetches (8) + 2 memory writes (8)
-        //total = 20
-    };
-    inst_table[0x09] = ADD_16(HL, BC, cpu.F);
-    inst_table[0x0A] = LD_8(cpu.A, BC_mem);
-    inst_table[0x0B] = DEC_16(BC);
-    inst_table[0x0C] = INC_8(cpu.C, cpu.F);
-    inst_table[0x0D] = DEC_8(cpu.C, cpu.F);
-    inst_table[0x0E] = LD_8(cpu.C, imm8);
-    inst_table[0x0F] = Instruction {
-        [&](){
-            RRC(cpu.A, cpu.F).execute();
-            cpu.F.set_flag(Flag::ZERO, 0);
-        }
-    };
+    inst_table[0x01] = LD_rr_n16(cpu.B, cpu.C);
+    inst_table[0x02] = LD_m_r(cpu.B, cpu.C, cpu.A);
+    inst_table[0x03] = INC_rr(cpu.B, cpu.C);
+    inst_table[0x04] = INC_r(cpu.B);
+    inst_table[0x05] = DEC_r(cpu.B);
+    inst_table[0x06] = LD_r_n(cpu.B);
+    inst_table[0x07] = ROT_Inst_A(Arithmetic::rot_left_circ);
+    inst_table[0x08] = LD_a16_SP();
+    inst_table[0x09] = ADD_HL_rr(cpu.B, cpu.C);
+    inst_table[0x0A] = LD_r_m(cpu.A, cpu.B, cpu.C);
+    inst_table[0x0B] = DEC_rr(cpu.B, cpu.C);
+    inst_table[0x0C] = INC_r(cpu.C);
+    inst_table[0x0D] = DEC_r(cpu.C);
+    inst_table[0x0E] = LD_r_n(cpu.C);
+    inst_table[0x0F] = ROT_Inst_A(Arithmetic::rot_right_circ);
 
     inst_table[0x10] = NOP();   //TODO: STOP instruction
     inst_table[0x11] = LD_16(DE, imm16);
