@@ -237,7 +237,7 @@ Instruction LD_rr_n16(uint8_t& dest_hi, uint8_t& dest_lo) {
         [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
         [&dest_hi, &dest_lo](CPU& cpu) {
             dest_hi = cpu.latch.W;
-            dest_hi = cpu.latch.Z;
+            dest_lo = cpu.latch.Z;
         }
     };
 }
@@ -260,6 +260,13 @@ Instruction LD_SP_HL() {
     return Instruction {
         [](CPU& cpu) {cpu.sp = pair(cpu.H, cpu.L);},
         [](CPU& cpu) {}
+    };
+}
+Instruction LD_SP_n16() {
+    return Instruction {
+        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
+        [](CPU& cpu) {cpu.sp = cpu.latch.combined(); }
     };
 }
 Instruction PUSH_rr(uint8_t& hi, uint8_t& lo) {
@@ -317,19 +324,19 @@ Instruction LD_HL_SPe() {
 //generic 8-bit ALU op
 Instruction ALU_Inst_r(MathOp op, const uint8_t& reg) {
     return Instruction {
-        [&op, &reg](CPU& cpu) { op(cpu, reg); }
+        [op, &reg](CPU& cpu) { op(cpu, reg); }
     };
 }
 Instruction ALU_Inst_m(MathOp op) {
     return Instruction { 
         [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [&op](CPU& cpu) {op(cpu, cpu.latch.Z);}
+        [op](CPU& cpu) {op(cpu, cpu.latch.Z);}
     };
 }
-Instruction ALU_Inst_m(MathOp op) {
+Instruction ALU_Inst_n(MathOp op) {
     return Instruction { 
         [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [&op](CPU& cpu) {op(cpu, cpu.latch.Z);}
+        [op](CPU& cpu) {op(cpu, cpu.latch.Z);}
     };
 }
 
@@ -413,6 +420,12 @@ Instruction INC_rr(uint8_t& reg1, uint8_t& reg2) {
         [](CPU&) {}
     };
 }
+Instruction INC_SP() { 
+    return Instruction {
+        [](CPU& cpu) {cpu.sp++;},
+        [](CPU& cpu) {}
+    };
+}
 Instruction DEC_rr(uint8_t& reg1, uint8_t& reg2) {
     return Instruction {
         [&reg1, &reg2](CPU&) { 
@@ -420,6 +433,12 @@ Instruction DEC_rr(uint8_t& reg1, uint8_t& reg2) {
             pair.set(pair.get() - 1);
         },
         [](CPU&) {}
+    };
+}
+Instruction DEC_SP() { 
+    return Instruction {
+        [](CPU& cpu) {cpu.sp--;},
+        [](CPU& cpu) {}
     };
 }
 Instruction ADD_HL_rr(uint8_t& reg1, uint8_t& reg2) {
@@ -437,6 +456,28 @@ Instruction ADD_HL_rr(uint8_t& reg1, uint8_t& reg2) {
             cpu.set_flag(Flag::NEGATIVE, 0);
             cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.H, reg1, carry));
             cpu.set_flag(Flag::CARRY, H_added > 0xff);
+            cpu.H = H_added;
+        }
+    };
+}
+Instruction ADD_HL_SP() {
+    return Instruction{
+        [](CPU& cpu) {
+            uint8_t lo = cpu.sp & 0xff;
+            uint16_t L_added = cpu.L + lo;
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.L, lo));
+            cpu.set_flag(Flag::CARRY, L_added > 0xff);
+            cpu.L = L_added & 0xff;
+        },
+        [](CPU& cpu) {
+            uint8_t hi = cpu.sp >> 8;
+            bool carry = cpu.get_flag(Flag::CARRY);
+            uint16_t H_added = cpu.H + hi + carry;
+            cpu.set_flag(Flag::NEGATIVE, 0);
+            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.H, hi, carry));
+            cpu.set_flag(Flag::CARRY, H_added > 0xff);
+            cpu.H = H_added;
         }
     };
 }
@@ -465,7 +506,7 @@ using RotFunc = uint8_t(*)(uint8_t num, bool& carry); //rot/shift function
 //-------Accumulator-------//
 Instruction ROT_Inst_A(RotFunc func) {
     return Instruction {
-        [&func](CPU& cpu) {
+        [func](CPU& cpu) {
             bool carry = cpu.get_flag(Flag::CARRY);
             cpu.A = Arithmetic::rot_left_circ(cpu.A, carry);
             cpu.F = flag_state(!cpu.A, 0, 0, carry);
@@ -477,7 +518,7 @@ Instruction ROT_Inst_A(RotFunc func) {
 Instruction ROT_Inst_r(RotFunc func, uint8_t& reg) {
     return Instruction {
         [](CPU& cpu) {cpu.fetch_byte();},    
-        [&func, &reg](CPU& cpu) {
+        [func, &reg](CPU& cpu) {
             bool carry = cpu.get_flag(Flag::CARRY);
             reg = Arithmetic::rot_left_circ(reg, carry);
             cpu.F = flag_state(!reg, 0, 0, carry);
@@ -490,7 +531,7 @@ Instruction ROT_Inst_m(RotFunc func) {
         [](CPU& cpu) {
             cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));
         },
-        [&func](CPU& cpu) {
+        [func](CPU& cpu) {
             bool carry = cpu.get_flag(Flag::CARRY);
             uint8_t result = func(cpu.latch.Z, carry);
             cpu.write_memory(pair(cpu.H, cpu.L), result);
@@ -701,5 +742,18 @@ Instruction RST(uint8_t addr) {
         [](CPU& cpu) {}
     };
 }
+
+//--------------------MISC-------------------//
+Instruction DI() {
+    return Instruction {
+        [](CPU& cpu) {cpu.IME = false;}
+    };
+}
+Instruction EI() {
+    return Instruction {
+        [](CPU& cpu) {cpu.IME = true;}
+    };
+}
+
 
 }   //Operation

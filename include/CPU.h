@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <iostream>
+#include "Instruction.h"
 
 class MMU;
 class Instruction;
@@ -24,7 +25,6 @@ public: //methods
     //cpu clocked in m-cycles (1 m-cycle = 4 t-states)
     void tick() {
         (this->*current_state)();
-        cycles++;
     }
     
     void print_state();
@@ -50,7 +50,7 @@ public: //data
     uint16_t sp;
     //data registers
     uint8_t A, B, C, D, E, H, L, F;
-    bool IME;
+    bool IME = false;
 
     struct {
         uint8_t W, Z;
@@ -70,8 +70,9 @@ private:
 
     //facilities
     MMU& mmu;
-    std::unique_ptr<Decoder> decoder;
     InterruptController& interrupt_controller;
+    std::unique_ptr<Decoder> decoder;
+    Instruction* current_inst;
     bool skip_to_inst_end = false;
 };
 

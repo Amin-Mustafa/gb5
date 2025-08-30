@@ -19,8 +19,8 @@ Decoder::Decoder(CPU& cpu)
         init_cb_table(cpu);
     }
 
-Instruction Decoder::decode(uint8_t opcode) {
-    return inst_table[opcode];
+Instruction* Decoder::decode(uint8_t opcode) {
+    return &inst_table[opcode];
 }
 
 void Decoder::init_instruction_table(CPU& cpu) {
@@ -44,234 +44,261 @@ void Decoder::init_instruction_table(CPU& cpu) {
     inst_table[0x0F] = ROT_Inst_A(Arithmetic::rot_right_circ);
 
     inst_table[0x10] = NOP();   //TODO: STOP instruction
-    inst_table[0x11] = LD_16(DE, imm16);
-    inst_table[0x12] = LD_8(DE_mem, cpu.A);
-    inst_table[0x13] = INC_16(DE);
-    inst_table[0x14] = INC_8(cpu.D, cpu.F);
-    inst_table[0x15] = DEC_8(cpu.D, cpu.F);
-    inst_table[0x16] = LD_8(cpu.D, imm8);
-    inst_table[0x17] = Instruction {
-        [&]() {
-            RL(cpu.A, cpu.F).execute();
-            cpu.F.set_flag(Flag::ZERO, 0);
-        }
-    };
-    inst_table[0x18] = cpu.JR(imm8);
-    inst_table[0x19] = ADD_16(HL, DE, cpu.F);
-    inst_table[0x1A] = LD_8(cpu.A, DE_mem);
-    inst_table[0x1B] = DEC_16(DE);
-    inst_table[0x1C] = INC_8(cpu.E, cpu.F);
-    inst_table[0x1D] = DEC_8(cpu.E, cpu.F);
-    inst_table[0x1E] = LD_8(cpu.E, imm8);
-    inst_table[0x1F] = Instruction {
-        [&](){
-            RR(cpu.A, cpu.F).execute();
-            cpu.F.set_flag(Flag::ZERO, 0);
-        }
-    };
-    inst_table[0x20] = cpu.JR(imm8, NZ);
-    inst_table[0x21] = LD_16(HL, imm16);
-    inst_table[0x22] = Instruction {
-        [&]() {
-            LD_8(cpu.M, cpu.A).execute();
-            HL.set(HL.get() + 1);
-        } 
-    };
-    inst_table[0x23] = INC_16(HL);
-    inst_table[0x24] = INC_8(cpu.H, cpu.F);
-    inst_table[0x25] = DEC_8(cpu.H, cpu.F);
-    inst_table[0x26] = LD_8(cpu.H, imm8);
-    inst_table[0x27] = NOP();   //TODO DAA
-    inst_table[0x28] = cpu.JR(imm8, Z);
-    inst_table[0x29] = ADD_16(HL, HL, cpu.F);
-    inst_table[0x2A] = Instruction {
-        [&]() {
-            LD_8(cpu.A, cpu.M).execute();
-            HL.set(HL.get() + 1);
-        }
-    };
-    inst_table[0x2B] = DEC_16(HL);
-    inst_table[0x2C] = INC_8(cpu.L, cpu.F);
-    inst_table[0x2D] = DEC_8(cpu.L, cpu.F);
-    inst_table[0x2E] = LD_8(cpu.L, imm8);
-    inst_table[0x2F] = Instruction {
-        [&](){
-            cpu.A.set(~cpu.A.get());
-            cpu.F.set_flag(Flag::NEGATIVE, 1);
-            cpu.F.set_flag(Flag::HALF_CARRY, 1);
-        }
-    };
+    inst_table[0x11] = LD_rr_n16(cpu.D, cpu.E);
+    inst_table[0x12] = LD_r_m(cpu.D, cpu.E, cpu.A);
+    inst_table[0x13] = INC_rr(cpu.D, cpu.E);
+    inst_table[0x14] = INC_r(cpu.D);
+    inst_table[0x15] = DEC_r(cpu.D);
+    inst_table[0x16] = LD_r_n(cpu.D);
+    inst_table[0x17] = ROT_Inst_A(Arithmetic::rot_left);
+    inst_table[0x18] = JR(no_cond);
+    inst_table[0x19] = ADD_HL_rr(cpu.D, cpu.E);
+    inst_table[0x1A] = LD_r_m(cpu.A, cpu.D, cpu.E);
+    inst_table[0x1B] = DEC_rr(cpu.D, cpu.E);
+    inst_table[0x1C] = INC_r(cpu.E);
+    inst_table[0x1D] = DEC_r(cpu.E);
+    inst_table[0x1E] = LD_r_n(cpu.E);
+    inst_table[0x1F] = ROT_Inst_A(Arithmetic::rot_right);
 
-    inst_table[0x30] = cpu.JR(imm8, NC);
-    inst_table[0x31] = LD_16(cpu.sp, imm16);
-    inst_table[0x32] = Instruction {
-        [&]() {
-            LD_8(cpu.M, cpu.A).execute();
-            HL.set(HL.get() - 1);
-        } 
-    };
-    inst_table[0x33] = INC_16(cpu.sp);
-    inst_table[0x34] = INC_8(cpu.M, cpu.F);
-    inst_table[0x35] = DEC_8(cpu.M, cpu.F);
-    inst_table[0x36] = LD_8(cpu.M, imm8);
-    inst_table[0x37] = Instruction{
-        [&](){
-            bool zero = cpu.F.get_flag(Flag::ZERO);
-            cpu.F.set(flag_state(zero, 0, 0, 1));
-        }
-    };
-    inst_table[0x38] = cpu.JR(imm8, C);
-    inst_table[0x39] = ADD_16(HL, cpu.sp, cpu.F);
-    inst_table[0x3A] = Instruction {
-        [&]() {
-            LD_8(cpu.A, cpu.M).execute();
-            HL.set(HL.get() - 1);
-        }
-    };
-    inst_table[0x3B] = DEC_16(cpu.sp);
-    inst_table[0x3C] = INC_8(cpu.A, cpu.F);
-    inst_table[0x3D] = DEC_8(cpu.A, cpu.F);
-    inst_table[0x3E] = LD_8(cpu.A, imm8);
-    inst_table[0x3F] = Instruction {
-        [&](){
-            bool zero = cpu.F.get_flag(Flag::ZERO);
-            bool carry = cpu.F.get_flag(Flag::CARRY);
-            cpu.F.set(flag_state(zero, 0, 0, !carry));
-        }
-    };
+    inst_table[0x20] = JR(NZ);
+    inst_table[0x21] = LD_rr_n16(cpu.H, cpu.L);
+    inst_table[0x22] = LD_HLinc_A();
+    inst_table[0x23] = INC_rr(cpu.H, cpu.L);
+    inst_table[0x24] = INC_r(cpu.H);
+    inst_table[0x25] = DEC_r(cpu.H);
+    inst_table[0x26] = LD_r_n(cpu.H);
+    inst_table[0x27] = DAA();
+    inst_table[0x28] = JR(Z);
+    inst_table[0x29] = ADD_HL_rr(cpu.H, cpu.L);
+    inst_table[0x2A] = LD_r_m(cpu.A, cpu.H, cpu.L);
+    inst_table[0x2B] = DEC_rr(cpu.H, cpu.L);
+    inst_table[0x2C] = INC_r(cpu.L);
+    inst_table[0x2D] = DEC_r(cpu.L);
+    inst_table[0x2E] = LD_r_n(cpu.L);
+    inst_table[0x2F] = CPL();
 
-    for(int i = 0x40; i < 0x80; ++i) {
-        inst_table[i] = LD_8(regs[(i - 0x40)/8], regs[(i & 0x0f)%8]);
-    }
+    inst_table[0x30] = JR(NC);   
+    inst_table[0x31] = LD_SP_n16();
+    inst_table[0x32] = LD_HLdec_A();
+    inst_table[0x33] = INC_SP();
+    inst_table[0x34] = INC_m();
+    inst_table[0x35] = DEC_m();
+    inst_table[0x36] = LD_m_n(cpu.H, cpu.L);
+    inst_table[0x37] = SCF();
+    inst_table[0x38] = JR(C);
+    inst_table[0x39] = ADD_HL_SP();
+    inst_table[0x3A] = LD_A_HLdec();
+    inst_table[0x3B] = DEC_SP();
+    inst_table[0x3C] = INC_r(cpu.A);
+    inst_table[0x3D] = DEC_r(cpu.A);
+    inst_table[0x3E] = LD_r_n(cpu.A);
+    inst_table[0x3F] = CCF();
 
-    for(int i = 0x80; i < 0xC0; ++i) {
-        inst_table[i] = alu_ops[(i - 0x80)/8](cpu.A, regs[(i & 0x0f)%8], cpu.F);
-    }
+    inst_table[0x40] = LD_r_r(cpu.B, cpu.B);                   
+    inst_table[0x41] = LD_r_r(cpu.B, cpu.C);       
+    inst_table[0x42] = LD_r_r(cpu.B, cpu.D);         
+    inst_table[0x43] = LD_r_r(cpu.B, cpu.E);       
+    inst_table[0x44] = LD_r_r(cpu.B, cpu.H);       
+    inst_table[0x45] = LD_r_r(cpu.B, cpu.L);      
+    inst_table[0x46] = LD_r_m(cpu.B, cpu.H, cpu.L);           
+    inst_table[0x47] = LD_r_r(cpu.B, cpu.A);    
+    inst_table[0x48] = LD_r_r(cpu.C, cpu.B);      
+    inst_table[0x49] = LD_r_r(cpu.C, cpu.C);     
+    inst_table[0x4A] = LD_r_r(cpu.C, cpu.D);         
+    inst_table[0x4B] = LD_r_r(cpu.C, cpu.E);         
+    inst_table[0x4C] = LD_r_r(cpu.C, cpu.H);          
+    inst_table[0x4D] = LD_r_r(cpu.C, cpu.L);         
+    inst_table[0x4E] = LD_r_m(cpu.C, cpu.H, cpu.L);             
+    inst_table[0x4F] = LD_r_r(cpu.C, cpu.A);     
+    
+    inst_table[0x50] = LD_r_r(cpu.D, cpu.B);                   
+    inst_table[0x51] = LD_r_r(cpu.D, cpu.C);       
+    inst_table[0x52] = LD_r_r(cpu.D, cpu.D);         
+    inst_table[0x53] = LD_r_r(cpu.D, cpu.E);       
+    inst_table[0x54] = LD_r_r(cpu.D, cpu.H);       
+    inst_table[0x55] = LD_r_r(cpu.D, cpu.L);      
+    inst_table[0x56] = LD_r_m(cpu.D, cpu.H, cpu.L);           
+    inst_table[0x57] = LD_r_r(cpu.D, cpu.A);    
+    inst_table[0x58] = LD_r_r(cpu.E, cpu.B);      
+    inst_table[0x59] = LD_r_r(cpu.E, cpu.C);     
+    inst_table[0x5A] = LD_r_r(cpu.E, cpu.D);         
+    inst_table[0x5B] = LD_r_r(cpu.E, cpu.E);         
+    inst_table[0x5C] = LD_r_r(cpu.E, cpu.H);          
+    inst_table[0x5D] = LD_r_r(cpu.E, cpu.L);         
+    inst_table[0x5E] = LD_r_m(cpu.E, cpu.H, cpu.L);             
+    inst_table[0x5F] = LD_r_r(cpu.E, cpu.A);
 
-    inst_table[0xC0] = cpu.RET_IF(NZ);
-    inst_table[0xC1] = cpu.POP(BC);
-    inst_table[0xC2] = cpu.JP(imm16, NZ);
-    inst_table[0xC3] = cpu.JP(imm16);
-    inst_table[0xC4] = cpu.CALL(imm16, NZ);
-    inst_table[0xC5] = cpu.PUSH(BC);
-    inst_table[0xC6] = ADD_8(cpu.A, imm8, cpu.F);
-    inst_table[0xC7] = cpu.RST(0x00);
-    inst_table[0xC8] = cpu.RET_IF(Z);
-    inst_table[0xC9] = cpu.RET();
-    inst_table[0xCA] = cpu.JP(imm16, Z);
-    inst_table[0xCB] = Instruction {
-        [this]() {
-            cb_table[Immediate8(cpu).get()].execute();
-        }
-    };
-    inst_table[0xCC] = cpu.CALL(imm16, Z);
-    inst_table[0xCD] = cpu.CALL(imm16);
-    inst_table[0xCE] = ADC_8(cpu.A, imm8, cpu.F);
-    inst_table[0xCF] = cpu.RST(0x08);
+    inst_table[0x60] = LD_r_r(cpu.H, cpu.B);                   
+    inst_table[0x61] = LD_r_r(cpu.H, cpu.C);       
+    inst_table[0x62] = LD_r_r(cpu.H, cpu.D);         
+    inst_table[0x63] = LD_r_r(cpu.H, cpu.E);       
+    inst_table[0x64] = LD_r_r(cpu.H, cpu.H);       
+    inst_table[0x65] = LD_r_r(cpu.H, cpu.L);      
+    inst_table[0x66] = LD_r_m(cpu.H, cpu.H, cpu.L);           
+    inst_table[0x67] = LD_r_r(cpu.H, cpu.A);    
+    inst_table[0x68] = LD_r_r(cpu.L, cpu.B);      
+    inst_table[0x69] = LD_r_r(cpu.L, cpu.C);     
+    inst_table[0x6A] = LD_r_r(cpu.L, cpu.D);         
+    inst_table[0x6B] = LD_r_r(cpu.L, cpu.E);         
+    inst_table[0x6C] = LD_r_r(cpu.L, cpu.H);          
+    inst_table[0x6D] = LD_r_r(cpu.L, cpu.L);         
+    inst_table[0x6E] = LD_r_m(cpu.L, cpu.H, cpu.L);             
+    inst_table[0x6F] = LD_r_r(cpu.L, cpu.A);
+    
+    inst_table[0x70] = LD_m_r(cpu.H, cpu.L, cpu.B);                   
+    inst_table[0x71] = LD_m_r(cpu.H, cpu.L, cpu.C);       
+    inst_table[0x72] = LD_m_r(cpu.H, cpu.L, cpu.D);         
+    inst_table[0x73] = LD_m_r(cpu.H, cpu.L, cpu.E);       
+    inst_table[0x74] = LD_m_r(cpu.H, cpu.L, cpu.H);       
+    inst_table[0x75] = LD_m_r(cpu.H, cpu.L, cpu.L);      
+    inst_table[0x76] = NOP();   //TODO HALT         
+    inst_table[0x77] = LD_m_r(cpu.H, cpu.L, cpu.A);    
+    inst_table[0x78] = LD_r_r(cpu.A, cpu.B);      
+    inst_table[0x79] = LD_r_r(cpu.A, cpu.C);     
+    inst_table[0x7A] = LD_r_r(cpu.A, cpu.D);         
+    inst_table[0x7B] = LD_r_r(cpu.A, cpu.E);         
+    inst_table[0x7C] = LD_r_r(cpu.A, cpu.H);          
+    inst_table[0x7D] = LD_r_r(cpu.A, cpu.L);         
+    inst_table[0x7E] = LD_r_m(cpu.A, cpu.H, cpu.L);             
+    inst_table[0x7F] = LD_r_r(cpu.A, cpu.A);
 
-    inst_table[0xD0] = cpu.RET_IF(NC);
-    inst_table[0xD1] = cpu.POP(DE);
-    inst_table[0xD2] = cpu.JP(imm16, NC);
+    inst_table[0x80] = ALU_Inst_r(ALU::add_8, cpu.B);                   
+    inst_table[0x81] = ALU_Inst_r(ALU::add_8, cpu.C);       
+    inst_table[0x82] = ALU_Inst_r(ALU::add_8, cpu.D);         
+    inst_table[0x83] = ALU_Inst_r(ALU::add_8, cpu.E);       
+    inst_table[0x84] = ALU_Inst_r(ALU::add_8, cpu.H);       
+    inst_table[0x85] = ALU_Inst_r(ALU::add_8, cpu.L);      
+    inst_table[0x86] = ALU_Inst_m(ALU::add_8);           
+    inst_table[0x87] = ALU_Inst_r(ALU::add_8, cpu.A);    
+    inst_table[0x88] = ALU_Inst_r(ALU::adc_8, cpu.B);      
+    inst_table[0x89] = ALU_Inst_r(ALU::adc_8, cpu.C);     
+    inst_table[0x8A] = ALU_Inst_r(ALU::adc_8, cpu.D);         
+    inst_table[0x8B] = ALU_Inst_r(ALU::adc_8, cpu.E);         
+    inst_table[0x8C] = ALU_Inst_r(ALU::adc_8, cpu.H);          
+    inst_table[0x8D] = ALU_Inst_r(ALU::adc_8, cpu.L);         
+    inst_table[0x8E] = ALU_Inst_m(ALU::adc_8);             
+    inst_table[0x8F] = ALU_Inst_r(ALU::adc_8, cpu.A);
+
+    inst_table[0x90] = ALU_Inst_r(ALU::sub_8, cpu.B);                   
+    inst_table[0x91] = ALU_Inst_r(ALU::sub_8, cpu.C);       
+    inst_table[0x92] = ALU_Inst_r(ALU::sub_8, cpu.D);         
+    inst_table[0x93] = ALU_Inst_r(ALU::sub_8, cpu.E);       
+    inst_table[0x94] = ALU_Inst_r(ALU::sub_8, cpu.H);       
+    inst_table[0x95] = ALU_Inst_r(ALU::sub_8, cpu.L);      
+    inst_table[0x96] = ALU_Inst_m(ALU::sub_8);           
+    inst_table[0x97] = ALU_Inst_r(ALU::sub_8, cpu.A);    
+    inst_table[0x98] = ALU_Inst_r(ALU::sbc_8, cpu.B);      
+    inst_table[0x99] = ALU_Inst_r(ALU::sbc_8, cpu.C);     
+    inst_table[0x9A] = ALU_Inst_r(ALU::sbc_8, cpu.D);         
+    inst_table[0x9B] = ALU_Inst_r(ALU::sbc_8, cpu.E);         
+    inst_table[0x9C] = ALU_Inst_r(ALU::sbc_8, cpu.H);          
+    inst_table[0x9D] = ALU_Inst_r(ALU::sbc_8, cpu.L);         
+    inst_table[0x9E] = ALU_Inst_m(ALU::sbc_8);             
+    inst_table[0x9F] = ALU_Inst_r(ALU::sbc_8, cpu.A);
+
+    inst_table[0xA0] = ALU_Inst_r(ALU::and_8, cpu.B);                   
+    inst_table[0xA1] = ALU_Inst_r(ALU::and_8, cpu.C);       
+    inst_table[0xA2] = ALU_Inst_r(ALU::and_8, cpu.D);         
+    inst_table[0xA3] = ALU_Inst_r(ALU::and_8, cpu.E);       
+    inst_table[0xA4] = ALU_Inst_r(ALU::and_8, cpu.H);       
+    inst_table[0xA5] = ALU_Inst_r(ALU::and_8, cpu.L);      
+    inst_table[0xA6] = ALU_Inst_m(ALU::and_8);           
+    inst_table[0xA7] = ALU_Inst_r(ALU::and_8, cpu.A);    
+    inst_table[0xA8] = ALU_Inst_r(ALU::xor_8, cpu.B);      
+    inst_table[0xA9] = ALU_Inst_r(ALU::xor_8, cpu.C);     
+    inst_table[0xAA] = ALU_Inst_r(ALU::xor_8, cpu.D);         
+    inst_table[0xAB] = ALU_Inst_r(ALU::xor_8, cpu.E);         
+    inst_table[0xAC] = ALU_Inst_r(ALU::xor_8, cpu.H);          
+    inst_table[0xAD] = ALU_Inst_r(ALU::xor_8, cpu.L);         
+    inst_table[0xAE] = ALU_Inst_m(ALU::xor_8);             
+    inst_table[0xAF] = ALU_Inst_r(ALU::xor_8, cpu.A);
+
+    inst_table[0xB0] = ALU_Inst_r(ALU::or_8, cpu.B);                   
+    inst_table[0xB1] = ALU_Inst_r(ALU::or_8, cpu.C);       
+    inst_table[0xB2] = ALU_Inst_r(ALU::or_8, cpu.D);         
+    inst_table[0xB3] = ALU_Inst_r(ALU::or_8, cpu.E);       
+    inst_table[0xB4] = ALU_Inst_r(ALU::or_8, cpu.H);       
+    inst_table[0xB5] = ALU_Inst_r(ALU::or_8, cpu.L);      
+    inst_table[0xB6] = ALU_Inst_m(ALU::or_8);           
+    inst_table[0xB7] = ALU_Inst_r(ALU::or_8, cpu.A);    
+    inst_table[0xB8] = ALU_Inst_r(ALU::cp_8, cpu.B);      
+    inst_table[0xB9] = ALU_Inst_r(ALU::cp_8, cpu.C);     
+    inst_table[0xBA] = ALU_Inst_r(ALU::cp_8, cpu.D);         
+    inst_table[0xBB] = ALU_Inst_r(ALU::cp_8, cpu.E);         
+    inst_table[0xBC] = ALU_Inst_r(ALU::cp_8, cpu.H);          
+    inst_table[0xBD] = ALU_Inst_r(ALU::cp_8, cpu.L);         
+    inst_table[0xBE] = ALU_Inst_m(ALU::cp_8);             
+    inst_table[0xBF] = ALU_Inst_r(ALU::cp_8, cpu.A);
+
+    inst_table[0xC0] = RET_IF(NZ);
+    inst_table[0xC1] = POP_rr(cpu.B, cpu.C);
+    inst_table[0xC2] = JP(NZ);
+    inst_table[0xC3] = JP(no_cond);
+    inst_table[0xC4] = CALL(NZ);
+    inst_table[0xC5] = PUSH_rr(cpu.B, cpu.C);
+    inst_table[0xC6] = ALU_Inst_n(ALU::add_8);
+    inst_table[0xC7] = RST(0x00);
+    inst_table[0xC8] = RET_IF(Z);
+    inst_table[0xC9] = RET();
+    inst_table[0xCA] = JP(Z);
+    inst_table[0xCB] = NOP();   //TODO prefix op
+    inst_table[0xCC] = CALL(Z);
+    inst_table[0xCD] = CALL(no_cond);
+    inst_table[0xCE] = ALU_Inst_n(ALU::adc_8);
+    inst_table[0xCF] = RST(0x08);
+
+    inst_table[0xD0] = RET_IF(NC);
+    inst_table[0xD1] = POP_rr(cpu.D, cpu.E);
+    inst_table[0xD2] = JP(NC);
     inst_table[0xD3] = NOP();
-    inst_table[0xD4] = cpu.CALL(imm16, NC);
-    inst_table[0xD5] = cpu.PUSH(DE);
-    inst_table[0xD6] = SUB_8(cpu.A, imm8, cpu.F);
-    inst_table[0xD7] = cpu.RST(0x10);
-    inst_table[0xD8] = cpu.RET_IF(C);
-    inst_table[0xD9] = cpu.RETI();
-    inst_table[0xDA] = cpu.JP(imm16, C);
+    inst_table[0xD4] = CALL(NC);
+    inst_table[0xD5] = PUSH_rr(cpu.D, cpu.E);
+    inst_table[0xD6] = ALU_Inst_n(ALU::sub_8);
+    inst_table[0xD7] = RST(0x10);
+    inst_table[0xD8] = RET_IF(C);
+    inst_table[0xD9] = RETI();
+    inst_table[0xDA] = JP(C);
     inst_table[0xDB] = NOP();  
-    inst_table[0xDC] = cpu.CALL(imm16, C);
+    inst_table[0xDC] = CALL(C);
     inst_table[0xDD] = NOP();
-    inst_table[0xDE] = SBC_8(cpu.A, imm8, cpu.F);
-    inst_table[0xDF] = cpu.RST(0x18);
+    inst_table[0xDE] = ALU_Inst_n(ALU::sbc_8);
+    inst_table[0xDF] = RST(0x18);
 
-    inst_table[0xE0] = Instruction {
-        [&](){
-            cpu.write_memory(0xFF00 + cpu.read_memory(cpu.pc+1), cpu.A.get());
-            cpu.pc++;
-        }
-    };
-    inst_table[0xE1] = cpu.POP(HL);
-    inst_table[0xE2] = Instruction {
-        [&](){
-            cpu.write_memory(0xFF00 + cpu.C.get(), cpu.A.get());
-        }
-    };
+    inst_table[0xE0] = LDH_n_A();
+    inst_table[0xE1] = POP_rr(cpu.H, cpu.L);
+    inst_table[0xE2] = LDH_C_A();
     inst_table[0xE3] = NOP();
     inst_table[0xE4] = NOP();
-    inst_table[0xE5] = cpu.PUSH(HL);
-    inst_table[0xE6] = AND_8(cpu.A, imm8, cpu.F);
-    inst_table[0xE7] = cpu.RST(0x20);
-    inst_table[0xE8] = ADD_SP_e8(cpu.sp, imm8, cpu.F);
-    inst_table[0xE9] = cpu.JPHL();
-    inst_table[0xEA] = Instruction {
-        [&](){
-            uint16_t addr = imm16.get();
-            cpu.write_memory(addr, cpu.A.get());
-        }
-    };
+    inst_table[0xE5] = PUSH_rr(cpu.H, cpu.L);
+    inst_table[0xE6] = ALU_Inst_n(ALU::and_8);
+    inst_table[0xE7] = RST(0x20);
+    inst_table[0xE8] = ADD_SPe();
+    inst_table[0xE9] = JPHL();
+    inst_table[0xEA] = LD_a16_A();
     inst_table[0xEB] = NOP();  
     inst_table[0xEC] = NOP();
     inst_table[0xED] = NOP();
-    inst_table[0xEE] = XOR_8(cpu.A, imm8, cpu.F);
-    inst_table[0xEF] = cpu.RST(0x28);
+    inst_table[0xEE] = ALU_Inst_n(ALU::xor_8);
+    inst_table[0xEF] = RST(0x28);
 
-    inst_table[0xF0] = Instruction {
-        [&](){
-            cpu.A.set( cpu.read_memory(0xFF00 + cpu.read_memory(cpu.pc + 1)) );
-            cpu.pc++;
-        }
-    };
-    inst_table[0xF1] = cpu.POP(AF);
-    inst_table[0xF2] = Instruction {
-        [&cpu = cpu](){
-            cpu.A.set( cpu.read_memory(0xFF00 + cpu.C.get()) );
-        }
-    };
-    inst_table[0xF3] = cpu.DI();    
+    inst_table[0xF0] = LDH_A_n();
+    inst_table[0xF1] = POP_rr(cpu.A, cpu.F);
+    inst_table[0xF2] = LDH_A_C();
+    inst_table[0xF3] = DI();
     inst_table[0xF4] = NOP();
-    inst_table[0xF5] = cpu.PUSH(AF);
-    inst_table[0xF6] = OR_8(cpu.A, imm8, cpu.F);
-    inst_table[0xF7] = cpu.RST(0x30);
-    inst_table[0xF8] = Instruction {
-        [&](){
-            StackPointer temp = cpu.sp;
-            ADD_SP_e8(temp, imm8, cpu.F).execute();
-            HL.set(temp.get());
-        }, 
-        -4  //this operation takes 4 fewer cycles than ADD SP+e8 for some reason
-    };
-    inst_table[0xF9] = Instruction {
-        [&]() {
-            cpu.sp.set(HL.get());
-        },
-        4
-    };
-    inst_table[0xFA] = Instruction {
-        [&](){
-            uint16_t addr = imm16.get();
-            cpu.A.set( cpu.read_memory(addr) );
-        }
-    };
-    inst_table[0xFB] = cpu.EI();
+    inst_table[0xF5] = PUSH_rr(cpu.A, cpu.F);
+    inst_table[0xF6] = ALU_Inst_n(ALU::or_8);
+    inst_table[0xF7] = RST(0x30);
+    inst_table[0xF8] = LD_HL_SPe();
+    inst_table[0xF9] = LD_SP_HL();
+    inst_table[0xFA] = LD_A_a16();
+    inst_table[0xFB] = EI();  
     inst_table[0xFC] = NOP();
     inst_table[0xFD] = NOP();
-    inst_table[0xFE] = CP_8(cpu.A, imm8, cpu.F);
-    inst_table[0xFF] = cpu.RST(0x38);
+    inst_table[0xFE] = ALU_Inst_n(ALU::cp_8);
+    inst_table[0xFF] = RST(0x38);
 }
 
-void Decoder::init_cb_table() {
-    for(int i = 0x00; i < 0x40; ++i) {
-        cb_table[i] = shift_ops[i / 8](regs[i % 8], cpu.F);
-    }
-    for(int i = 0x40; i < 0x80; ++i) {
-        cb_table[i] = BIT(regs[i % 8], (i - 0x40) / 8, cpu.F);
-    }
-    for(int i = 0x80; i < 0xC0; ++i) {
-        cb_table[i] = RES(regs[i % 8], (i - 0x80) / 8);
-    }
-    for(int i = 0xC0; i < 0x100; ++i) {
-        cb_table[i] = SET(regs[i % 8], (i - 0x80) / 8);
-    }
+void Decoder::init_cb_table(CPU&) {
+
 }

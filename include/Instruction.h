@@ -6,18 +6,14 @@
 #include <functional>
 #include <cstdint>
 
-class MMU;
-class Register8;
-class Register16;
-class FlagRegister;
-class StackPointer;
-class Immediate8;
-
 class CPU;
 
 class Instruction {
 public:
     typedef std::function<void(CPU&)> MicroOp;
+
+    Instruction()   
+        :ops{} {}
 
     Instruction(std::initializer_list<MicroOp> sub_ops)
         :ops{sub_ops} {}
@@ -68,6 +64,7 @@ Instruction LD_HLinc_A();
 Instruction LD_rr_n16(uint8_t& dest_hi, uint8_t& dest_lo);
 Instruction LD_a16_SP();
 Instruction LD_SP_HL();
+Instruction LD_SP_n16();
 Instruction PUSH_rr(uint8_t& hi, uint8_t& lo);
 Instruction POP_rr(uint8_t& hi, uint8_t& lo);
 Instruction LD_HL_SPe();
@@ -77,7 +74,7 @@ Instruction LD_HL_SPe();
 using MathOp = void(*)(CPU& cpu, uint8_t reg);
 Instruction ALU_Inst_r(MathOp op, const uint8_t& reg);
 Instruction ALU_Inst_m(MathOp op);
-Instruction ALU_Inst_m(MathOp op);
+Instruction ALU_Inst_n(MathOp op);
 Instruction INC_r(uint8_t& reg);
 Instruction INC_m();
 Instruction INC_n();
@@ -90,8 +87,11 @@ Instruction DAA();
 Instruction CPL();
 //16-bit
 Instruction INC_rr(uint8_t& reg1, uint8_t& reg2);
+Instruction INC_SP();
 Instruction DEC_rr(uint8_t& reg1, uint8_t& reg2);
+Instruction DEC_SP();
 Instruction ADD_HL_rr(uint8_t& reg1, uint8_t& reg2);
+Instruction ADD_HL_SP();
 Instruction ADD_SPe();
 
 //----------------------ROTATE, SHIFT, BIT----------------------//
@@ -113,10 +113,15 @@ using ConditionCheck = bool(*)(const uint8_t& flags);
 Instruction JP(ConditionCheck cc);
 Instruction JPHL();
 Instruction JR(ConditionCheck cc);
+Instruction CALL(ConditionCheck cc);
 Instruction RET();
 Instruction RET_IF(ConditionCheck cc);
 Instruction RETI();
 Instruction RST(uint8_t addr);
+
+//--------------------------MISC------------------------//
+Instruction DI();
+Instruction EI();
 }   //Operation
 
 #endif

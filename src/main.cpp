@@ -1,5 +1,4 @@
 #include "../include/Memory/MMU.h"
-#include "../include/Register.h"
 #include "../include/Memory/MemoryMap.h"
 
 #include "../include/CPU.h"
@@ -32,7 +31,7 @@ int main(int argc, char* argv[]) {
     CPU cpu(mem, map.interrupt_controller);
     Disassembler dis(mem);
 
-    std::string cart = "../ROM/07-jr,jp,call,ret,rst.gb";
+    std::string cart = "../ROM/06-ld r,r.gb";
 
     std::string blargg_log_file = "../log_cmp/Blargg.txt";
     std::string my_log_file = "../log_cmp/log.txt";
@@ -56,8 +55,6 @@ int main(int argc, char* argv[]) {
 
     else if(option == "dis") {
         while(true) {
-            dis.disassemble_at(cpu.pc);
-            cpu.print_state();
             cpu.tick();
             dbg_out(map.serial_port);
             std::cin.get();
