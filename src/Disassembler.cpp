@@ -119,12 +119,18 @@ void Disassembler::disassemble_at(uint16_t pos) {
             cout << format("CALL {}, ${:02x}{:02x}", control_conditions[(opcode - 0xC4)/8], BYTE2, BYTE1);
             break;
 
-        case 0xC1: case 0xD1: case 0xE1: case 0xF1:
+        case 0xC1: case 0xD1: case 0xE1:
             cout << format("POP {}", reg_pairs[(opcode>>4) - 0xC]);
             break;
+        case 0xF1:
+            cout << "POP AF";
+            break;
 
-        case 0xC5: case 0xD5: case 0xE5: case 0xF5:
+        case 0xC5: case 0xD5: case 0xE5:
             cout << format("PUSH {}", reg_pairs[(opcode>>4) - 0xC]);
+            break;
+        case 0xF5:
+            cout << "PUSH AF";
             break;
         
         case 0xC6: case 0xD6: case 0xE6: case 0xF6:

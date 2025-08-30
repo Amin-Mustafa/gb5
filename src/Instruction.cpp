@@ -278,7 +278,6 @@ Instruction PUSH_rr(uint8_t& hi, uint8_t& lo) {
         },
         [&lo](CPU& cpu) {
             cpu.write_memory(cpu.sp, lo);
-            cpu.sp--;
         },
         [](CPU&) {}
     };
@@ -623,7 +622,7 @@ using ConditionCheck = bool(*)(const uint8_t& flags);
 Instruction JP(ConditionCheck cc) {
     return Instruction {
         [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [&cc](CPU& cpu) {
+        [cc](CPU& cpu) {
             cpu.latch.W = cpu.fetch_byte();
             if(!cc(cpu.F)) cpu.skip_inst();
         },
@@ -638,21 +637,22 @@ Instruction JPHL(){
 }
 Instruction JR(ConditionCheck cc) {
     return Instruction {
-        [&cc](CPU& cpu) {
+        [cc](CPU& cpu) {
             cpu.latch.Z = cpu.fetch_byte();
             if(!cc(cpu.F)) cpu.skip_inst();
         },
         [](CPU& cpu) {
             int8_t offset = static_cast<int8_t>(cpu.latch.Z);
             cpu.latch.set(cpu.pc + offset);
+            cpu.pc = cpu.latch.combined();
         },
-        [](CPU& cpu) {cpu.pc = cpu.latch.combined();}
+        [](CPU& cpu) {}
     };
 }
 Instruction CALL(ConditionCheck cc){
     return Instruction {
         [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [&cc](CPU& cpu) {
+        [cc](CPU& cpu) {
             cpu.latch.W = cpu.fetch_byte();
             if(!cc(cpu.F)) cpu.skip_inst();
         },
@@ -690,7 +690,7 @@ Instruction RET_IF(ConditionCheck cc) {
     //unlike conditional CALL, JP, JR, conditional RET has 
     //a dedicated cycle just for condition check
     return Instruction {
-        [&cc](CPU& cpu) {
+        [cc](CPU& cpu) {
             if(!cc(cpu.F)) cpu.skip_inst();
         },
         [](CPU& cpu) {
@@ -736,7 +736,6 @@ Instruction RST(uint8_t addr) {
         },
         [addr](CPU& cpu) {
             cpu.write_memory(cpu.sp, (cpu.pc + 1) & 0xff);
-            cpu.sp--;
             cpu.pc = addr - 1;
         },
         [](CPU& cpu) {}

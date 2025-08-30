@@ -60,6 +60,7 @@ void CPU::fetch_and_execute() {
     }
 
     if(skip_to_inst_end) {
+        skip_to_inst_end = false;
         cycles = current_inst->length() - 1;
     }
 

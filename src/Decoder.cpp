@@ -45,7 +45,7 @@ void Decoder::init_instruction_table(CPU& cpu) {
 
     inst_table[0x10] = NOP();   //TODO: STOP instruction
     inst_table[0x11] = LD_rr_n16(cpu.D, cpu.E);
-    inst_table[0x12] = LD_r_m(cpu.D, cpu.E, cpu.A);
+    inst_table[0x12] = LD_m_r(cpu.D, cpu.E, cpu.A);
     inst_table[0x13] = INC_rr(cpu.D, cpu.E);
     inst_table[0x14] = INC_r(cpu.D);
     inst_table[0x15] = DEC_r(cpu.D);
@@ -70,7 +70,7 @@ void Decoder::init_instruction_table(CPU& cpu) {
     inst_table[0x27] = DAA();
     inst_table[0x28] = JR(Z);
     inst_table[0x29] = ADD_HL_rr(cpu.H, cpu.L);
-    inst_table[0x2A] = LD_r_m(cpu.A, cpu.H, cpu.L);
+    inst_table[0x2A] = LD_A_HLinc();
     inst_table[0x2B] = DEC_rr(cpu.H, cpu.L);
     inst_table[0x2C] = INC_r(cpu.L);
     inst_table[0x2D] = DEC_r(cpu.L);
