@@ -43,6 +43,7 @@ public: //methods
 
     //skip to end of instruction
     void skip_inst() {skip_to_inst_end = true;}
+    void prefix_mode() {cb_mode = true;}
 
 public: //data
     //program counter and stack pointer
@@ -58,6 +59,8 @@ public: //data
         void set(uint16_t val) {W = val >> 8; Z = val & 0xFF;}
     } latch;
 
+    bool inst_done = false;
+
 private:
     using StateFunction = void (CPU::*)();  //pointer to state function
 
@@ -67,6 +70,11 @@ private:
     StateFunction current_state;
     void fetch_and_execute();
     void interrupted();
+
+    //execution
+    Instruction* fetch_inst();
+    void execute_inst();
+    bool cb_mode = false;
 
     //facilities
     MMU& mmu;

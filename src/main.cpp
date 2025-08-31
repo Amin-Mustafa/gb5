@@ -25,39 +25,21 @@ long line_count(const std::string& filename) {
     fs.close();
 }
 
-int main(int argc, char* argv[]) {
+int main() {
     MMU mem;
     MemoryMap map(mem);
     CPU cpu(mem, map.interrupt_controller);
     Disassembler dis(mem);
 
-    std::string cart = "../ROM/06-ld r,r.gb";
-
-    std::string blargg_log_file = "../log_cmp/Blargg.txt";
-    std::string my_log_file = "../log_cmp/log.txt";
-    std::ofstream fs;
-    long blargg_log_lines;
-    std::string option = argv[1];
+    std::string cart = "../ROM/test.gb";
 
     mem.write(0xFF44, 0x90);    //assume for now that LY = 0x90
     map.rom.load(cart);
-    
-    if(option == "log") {
-        fs.open(my_log_file);
-        blargg_log_lines = line_count(blargg_log_file);
-        std::cout << blargg_log_lines << '\n';
-        for(long lines = 0; lines <= blargg_log_lines; ++lines) {
-            cpu.log_state(fs);
-            cpu.tick();
-        }
-        fs.close(); 
-    }
 
-    else if(option == "dis") {
-        while(true) {
-            cpu.tick();
+    while(true) {
+        cpu.tick();
+        if(cpu.inst_done)
             dbg_out(map.serial_port);
-            std::cin.get();
-        }   
-    }
+        std::cin.get();
+    }   
 }

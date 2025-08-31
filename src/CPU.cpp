@@ -49,27 +49,40 @@ uint8_t CPU::fetch_byte() {
     return byte;
 }
 
-void CPU::fetch_and_execute() {
-    static Disassembler dis(mmu);
-    if(cycles == 0) {
-        //fetch instruction and execute first subop in first tick
-        uint8_t opcode = fetch_byte();
-        current_inst = decoder->decode(opcode);
-        dis.disassemble_at(pc);
-        print_state();
+Instruction* CPU::fetch_inst() {
+    uint8_t opcode = fetch_byte();
+    if(cb_mode) {
+        cb_mode = false;
+        return decoder->decode_cb(opcode);
     }
+    return decoder->decode(opcode);
+}
 
+void CPU::execute_inst() {
     if(skip_to_inst_end) {
         skip_to_inst_end = false;
         cycles = current_inst->length() - 1;
     }
-
-    //execute 1 subop
     current_inst->execute_subop(*this, cycles);
+}
+
+void CPU::fetch_and_execute() {
+    static Disassembler dis(mmu);
+
+    if(cycles == 0) {
+        //fetch instruction and execute first subop in first tick
+        inst_done = false;
+        current_inst = fetch_inst();
+        dis.disassemble_at(pc);
+        print_state();
+    }
+
+    execute_inst();
     cycles++;
 
     if(cycles >= current_inst->length()) {
         //once reach end, fetch next instruction
+        inst_done = true;
         cycles = 0;
     }
 }

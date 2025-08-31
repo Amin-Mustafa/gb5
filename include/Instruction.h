@@ -97,16 +97,20 @@ Instruction ADD_SPe();
 //----------------------ROTATE, SHIFT, BIT----------------------//
 using RotFunc = uint8_t(*)(uint8_t num, bool& carry); //rot/shift function
 Instruction ROT_Inst_A(RotFunc func);
-Instruction ROT_Inst_r(RotFunc func, uint8_t& reg);
-Instruction ROT_Inst_m(RotFunc func);
-Instruction BIT_r(uint8_t& reg, uint8_t bit);
-Instruction BIT_m(uint8_t bit);
-Instruction SWAP_r(uint8_t& reg);
-Instruction SWAP_m();
-Instruction SET_r(uint8_t& reg, uint8_t bit);
-Instruction SET_m(uint8_t bit);
-Instruction CLR_r(uint8_t& reg, uint8_t bit);
-Instruction CLR_m(uint8_t bit);
+//---------PREFIX ops---------//
+Instruction PREFIX();
+Instruction PREFIX_Inst_r(Instruction::MicroOp op);
+Instruction PREFIX_Inst_m(Instruction::MicroOp op);
+Instruction::MicroOp ROT_r(RotFunc func, uint8_t& reg);
+Instruction::MicroOp ROT_m(RotFunc func);
+Instruction::MicroOp BIT_r(uint8_t& reg, uint8_t bit);
+Instruction::MicroOp BIT_m(uint8_t bit);
+Instruction::MicroOp SWAP_r(uint8_t& reg);
+Instruction::MicroOp SWAP_m();
+Instruction::MicroOp SET_r(uint8_t& reg, uint8_t bit);
+Instruction::MicroOp SET_m(uint8_t bit);
+Instruction::MicroOp RES_r(uint8_t& reg, uint8_t bit);
+Instruction::MicroOp RES_m(uint8_t bit);
 
 //----------------------CONTROL FLOW--------------------//
 using ConditionCheck = bool(*)(const uint8_t& flags);

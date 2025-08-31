@@ -513,35 +513,47 @@ Instruction ROT_Inst_A(RotFunc func) {
     };
 }
 //-------PREFIX ops--------//
-//all PREFIX ops have an extra fetch cycle
-Instruction ROT_Inst_r(RotFunc func, uint8_t& reg) {
+Instruction PREFIX() {
+    return {
+        [](CPU& cpu) {
+            cpu.prefix_mode();
+        }
+    };
+}
+Instruction PREFIX_Inst_r(Instruction::MicroOp op) {
     return Instruction {
-        [](CPU& cpu) {cpu.fetch_byte();},    
+        op
+    };  
+}
+Instruction PREFIX_Inst_m(Instruction::MicroOp op) {
+    return Instruction {
+        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
+        op,
+        [](CPU& cpu) {}
+    };
+}
+Instruction::MicroOp ROT_r(RotFunc func, uint8_t& reg) {   
+    return {
         [func, &reg](CPU& cpu) {
             bool carry = cpu.get_flag(Flag::CARRY);
-            reg = Arithmetic::rot_left_circ(reg, carry);
+            reg = func(reg, carry);
             cpu.F = flag_state(!reg, 0, 0, carry);
         }
     };
 }
-Instruction ROT_Inst_m(RotFunc func) {
-    return Instruction {
-        [](CPU& cpu) {cpu.fetch_byte();},    
-        [](CPU& cpu) {
-            cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));
-        },
+Instruction::MicroOp ROT_m(RotFunc func) {
+    return {
         [func](CPU& cpu) {
             bool carry = cpu.get_flag(Flag::CARRY);
             uint8_t result = func(cpu.latch.Z, carry);
             cpu.write_memory(pair(cpu.H, cpu.L), result);
-        },
-        [](CPU& cpu) {}
+            cpu.F = flag_state(!result, 0, 0, carry);
+        }
     };
 }
 
-Instruction BIT_r(uint8_t& reg, uint8_t bit) {
-    return Instruction {
-        [](CPU& cpu) {cpu.fetch_byte();},
+Instruction::MicroOp BIT_r(uint8_t& reg, uint8_t bit) {
+    return {
         [&reg, bit](CPU& cpu) {
             bool bit_is_set = Arithmetic::bit_check(reg, bit);
             cpu.set_flag(Flag::ZERO, bit_is_set);
@@ -550,12 +562,8 @@ Instruction BIT_r(uint8_t& reg, uint8_t bit) {
         }
     };
 }
-Instruction BIT_m(uint8_t bit) {
-    return Instruction {
-        [](CPU& cpu) {cpu.fetch_byte();},
-        [](CPU& cpu) {
-            cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));
-        },
+Instruction::MicroOp BIT_m(uint8_t bit) {
+    return {
         [bit](CPU& cpu) {
             bool bit_is_set = Arithmetic::bit_check(cpu.latch.Z, bit);
             cpu.set_flag(Flag::ZERO, bit_is_set);
@@ -564,56 +572,49 @@ Instruction BIT_m(uint8_t bit) {
         }
     };
 }
-Instruction SWAP_r(uint8_t& reg) {
-    return Instruction{
-        [](CPU& cpu) {cpu.fetch_byte();},
+Instruction::MicroOp SWAP_r(uint8_t& reg) {
+    return {
         [&reg](CPU& cpu){
             reg = Arithmetic::swap_nibs(reg);
             cpu.F = flag_state(reg == 0, 0, 0, 0);
         }
     };
 }
-Instruction SWAP_m() {
-    return Instruction{
-        [](CPU& cpu) {cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
+Instruction::MicroOp SWAP_m() {
+    return {
         [](CPU& cpu){
             cpu.latch.Z = Arithmetic::swap_nibs(cpu.latch.Z);
             cpu.F = flag_state(cpu.latch.Z == 0, 0, 0, 0);
-        },
-        [](CPU& cpu){
             cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);
         }
     };
 }
-Instruction SET_r(uint8_t& reg, uint8_t bit) {
-    return Instruction {
-        [](CPU& cpu) {cpu.fetch_byte();},
+Instruction::MicroOp SET_r(uint8_t& reg, uint8_t bit) {
+    return {
         [&reg, bit](CPU& cpu) {reg = Arithmetic::bit_set(reg, bit);}
     };
 }
-Instruction SET_m(uint8_t bit) {
-    return Instruction {
-        [](CPU& cpu) {cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [bit](CPU& cpu) {cpu.latch.Z = Arithmetic::bit_set(cpu.latch.Z, bit);},
-        [](CPU& cpu) {cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);}
+Instruction::MicroOp SET_m(uint8_t bit) {
+    return {
+        [bit](CPU& cpu) {
+            cpu.latch.Z = Arithmetic::bit_set(cpu.latch.Z, bit);
+            cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);
+        }
     };
 }
 
-Instruction CLR_r(uint8_t& reg, uint8_t bit) {
-    return Instruction {
-        [](CPU& cpu) {cpu.fetch_byte();},
+Instruction::MicroOp RES_r(uint8_t& reg, uint8_t bit) {
+    return {
         [&reg, bit](CPU& cpu) {reg = Arithmetic::bit_clear(reg, bit);}
     };
 }
 
-Instruction CLR_m(uint8_t bit) {
-    return Instruction {
-        [](CPU& cpu) {cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [bit](CPU& cpu) {cpu.latch.Z = Arithmetic::bit_clear(cpu.latch.Z, bit);},
-        [](CPU& cpu) {cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);}
+Instruction::MicroOp RES_m(uint8_t bit) {
+    return {
+        [bit](CPU& cpu) {
+            cpu.latch.Z = Arithmetic::bit_clear(cpu.latch.Z, bit);
+            cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);
+        }
     };
 }
 
