@@ -7,16 +7,6 @@
 #include <fstream>
 #include <algorithm>
 
-std::string dbg_out(SerialPort& sp) {
-    std::string dbg_msg;
-    for(const auto& c : sp.destination_buffer) {
-        dbg_msg += c;
-        std::cout << (char)c;
-    }
-    std::cout << '\n';
-    return dbg_msg;
-}
-
 long line_count(const std::string& filename) {
     std::fstream fs;
     fs.open(filename);
@@ -31,15 +21,15 @@ int main() {
     CPU cpu(mem, map.interrupt_controller);
     Disassembler dis(mem);
 
-    std::string cart = "../ROM/test.gb";
+    std::string cart = "../ROM/03-op sp,hl.gb";
 
     mem.write(0xFF44, 0x90);    //assume for now that LY = 0x90
     map.rom.load(cart);
 
     while(true) {
         cpu.tick();
-        if(cpu.inst_done)
-            dbg_out(map.serial_port);
-        std::cin.get();
+        if(cpu.inst_done) {
+            std::cin.get();
+        }
     }   
 }

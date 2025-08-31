@@ -50,11 +50,15 @@ uint8_t CPU::fetch_byte() {
 }
 
 Instruction* CPU::fetch_inst() {
+    static Disassembler dis(mmu);
     uint8_t opcode = fetch_byte();
     if(cb_mode) {
         cb_mode = false;
+        dis.disassemble_prefix_op(opcode);
         return decoder->decode_cb(opcode);
     }
+    dis.disassemble_at(pc);
+    print_state();
     return decoder->decode(opcode);
 }
 
@@ -67,14 +71,10 @@ void CPU::execute_inst() {
 }
 
 void CPU::fetch_and_execute() {
-    static Disassembler dis(mmu);
-
     if(cycles == 0) {
         //fetch instruction and execute first subop in first tick
         inst_done = false;
         current_inst = fetch_inst();
-        dis.disassemble_at(pc);
-        print_state();
     }
 
     execute_inst();
