@@ -302,58 +302,57 @@ void Decoder::init_cb_table(CPU& cpu) {
     uint8_t* reg;
     for(int i = 0; i < 0x08; ++i) {
         reg = regs[i % 8];  
-        if(reg) cb_table[i] = PREFIX_Inst_r(ROT_r(rot_left_circ, *reg));
-        else    cb_table[i] = PREFIX_Inst_m(ROT_m(rot_left_circ));
+        if(reg) cb_table[i] = ROT_Inst_r(rot_left_circ, *reg);
+        else    cb_table[i] = ROT_Inst_m(rot_left_circ);
     }
     for(int i = 0x08; i < 0x10; ++i) {
         reg = regs[i % 8];
-        if(reg) cb_table[i] = PREFIX_Inst_r(ROT_r(rot_right_circ, *reg));
-        else    cb_table[i] = PREFIX_Inst_m(ROT_m(rot_right_circ));
+        if(reg) cb_table[i] = ROT_Inst_r(rot_right_circ, *reg);
+        else    cb_table[i] = ROT_Inst_m(rot_right_circ);
     }
     for(int i = 0x10; i < 0x18; ++i) {
         reg = regs[i % 8];
-        if(reg) cb_table[i] = PREFIX_Inst_r(ROT_r(rot_left, *reg));
-        else    cb_table[i] = PREFIX_Inst_r(ROT_m(rot_left));
+        if(reg) cb_table[i] = ROT_Inst_r(rot_left, *reg);
+        else    cb_table[i] = ROT_Inst_m(rot_left);
     }
-    cb_table[0x10] = PREFIX_Inst_r(ROT_r(rot_left, cpu.B));
     for(int i = 0x18; i < 0x20; ++i) {
         reg = regs[i % 8];
-        if(reg) cb_table[i] = PREFIX_Inst_r(ROT_r(rot_right, *reg));
-        else    cb_table[i] = PREFIX_Inst_m(ROT_m(rot_right));
+        if(reg) cb_table[i] = ROT_Inst_r(rot_right, *reg);
+        else    cb_table[i] = ROT_Inst_m(rot_right);
     }
     for(int i = 0x20; i < 0x28; ++i) {
         reg = regs[i % 8];
-        if(reg) cb_table[i] = PREFIX_Inst_r(ROT_r(shift_left_arithmetic, *reg));
-        else    cb_table[i] = PREFIX_Inst_m(ROT_m(shift_left_arithmetic));
+        if(reg) cb_table[i] = ROT_Inst_r(shift_left_arithmetic, *reg);
+        else    cb_table[i] = ROT_Inst_m(shift_left_arithmetic);
     }
     for(int i = 0x28; i < 0x30; ++i) {
         reg = regs[i % 8];
-        if(reg) cb_table[i] = PREFIX_Inst_r(ROT_r(shift_right_arithmetic, *reg));
-        else    cb_table[i] = PREFIX_Inst_m(ROT_m(shift_right_arithmetic));
+        if(reg) cb_table[i] = ROT_Inst_r(shift_right_arithmetic, *reg);
+        else    cb_table[i] = ROT_Inst_m(shift_right_arithmetic);
     }
     for(int i = 0x30; i < 0x38; ++i) {
         reg = regs[i % 8];
-        if(reg) cb_table[i] = PREFIX_Inst_r(SWAP_r(*reg));
-        else    cb_table[i] = PREFIX_Inst_m(SWAP_m());
+        if(reg) cb_table[i] = SWAP_r(*reg);
+        else    cb_table[i] = SWAP_m();
     }
     for(int i = 0x38; i < 0x40; ++i) {
         reg = regs[i % 8];
-        if(reg) cb_table[i] = PREFIX_Inst_r(ROT_r(shift_right_logical, *reg));
-        else    cb_table[i] = PREFIX_Inst_m(ROT_m(shift_right_logical));
+        if(reg) cb_table[i] = ROT_Inst_r(shift_right_logical, *reg);
+        else    cb_table[i] = ROT_Inst_m(shift_right_logical);
     }
     for(int i = 0x40; i < 0x80; ++i) {
         reg = regs[i % 8];
-        if(reg) cb_table[i] = PREFIX_Inst_r(BIT_r(*reg, (i - 0x40) / 8));
-        else    cb_table[i] = PREFIX_Inst_m(BIT_m((i - 0x40) / 8));
+        if(reg) cb_table[i] = BIT_r(*reg, (i - 0x40) / 8);
+        else    cb_table[i] = BIT_m((i - 0x40) / 8);
     }
     for(int i = 0x80; i < 0xC0; ++i) {
         reg = regs[i % 8];
-        if(reg) cb_table[i] = PREFIX_Inst_r(RES_r(*reg, (i - 0x40) / 8));
-        else    cb_table[i] = PREFIX_Inst_m(RES_m((i - 0x40) / 8));
+        if(reg) cb_table[i] = RES_r(*reg, (i - 0x80) / 8);
+        else    cb_table[i] = RES_m((i - 0x80) / 8);
     }
-    for(int i = 0x80; i < 0xC0; ++i) {
+    for(int i = 0xC0; i < 0x100; ++i) {
         reg = regs[i % 8];
-        if(reg) cb_table[i] = PREFIX_Inst_r(SET_r(*reg, (i - 0x40) / 8));
-        else    cb_table[i] = PREFIX_Inst_m(SET_m((i - 0x40) / 8));
+        if(reg) cb_table[i] = SET_r(*reg, (i - 0xC0) / 8);
+        else    cb_table[i] = SET_m((i - 0xC0) / 8);
     }
 }

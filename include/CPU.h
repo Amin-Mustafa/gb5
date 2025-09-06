@@ -29,6 +29,7 @@ public: //methods
     
     void print_state();
     void log_state(std::ostream& os);
+    long log_lines;
 
     uint8_t read_memory(uint16_t addr);
     void write_memory(uint16_t addr, uint8_t val);
