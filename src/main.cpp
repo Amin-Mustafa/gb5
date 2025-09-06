@@ -22,14 +22,11 @@ int main() {
     Disassembler dis(mem);
 
     std::string cart = "../ROM/11-op a,(hl).gb";
-    std::string blargg_log_file = "../log_cmp/Blargg.txt";
-    long blargg_num_lines = line_count(blargg_log_file);
 
     mem.write(0xFF44, 0x90);    //assume for now that LY = 0x90
     map.rom.load(cart);
 
-    while(cpu.log_lines < blargg_num_lines) {
+    while(true) {
         cpu.tick();
     }   
-    std::cout << cpu.log_lines;
 }

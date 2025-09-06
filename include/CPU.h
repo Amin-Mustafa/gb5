@@ -29,7 +29,6 @@ public: //methods
     
     void print_state();
     void log_state(std::ostream& os);
-    long log_lines;
 
     uint8_t read_memory(uint16_t addr);
     void write_memory(uint16_t addr, uint8_t val);
@@ -59,8 +58,6 @@ public: //data
         uint16_t combined() const {return (W << 8) | Z;}
         void set(uint16_t val) {W = val >> 8; Z = val & 0xFF;}
     } latch;
-
-    bool inst_done = false;
 
 private:
     using StateFunction = void (CPU::*)();  //pointer to state function
