@@ -14,7 +14,6 @@ public:
     SerialPort(MMU& mem);
     uint8_t serial_read(uint16_t addr);
     void serial_write(uint16_t addr, uint8_t val); 
-    std::vector<uint8_t> destination_buffer;
 private: 
     //Serial port maps 0xFF01 and 0xFF02 
     uint8_t serial[2];      

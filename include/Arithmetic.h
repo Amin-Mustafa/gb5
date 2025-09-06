@@ -4,23 +4,23 @@
 #include <cstdint>
 
 namespace Arithmetic {
-inline bool half_carry_add_8(uint8_t a, uint8_t b) {
-    return ((a & 0xF) + (b & 0xF)) & 0x10;
+inline bool half_carry_add_8(uint8_t a, uint8_t b, bool carry = 0) {
+    return ((a & 0xF) + (b & 0xF) + carry) > 0xF;
 }
 
 inline bool half_carry_add_16(uint16_t a, uint16_t b) {
     return ((a & 0x0FFF) + (b & 0x0FFF)) & 0x1000;
 }
 
-inline bool half_carry_sub_8(uint8_t a, uint8_t b) {
-    return (a & 0xF) < (b & 0xF);
+inline bool half_carry_sub_8(uint8_t a, uint8_t b, bool carry = 0) {
+    return ((a & 0xF) - (b & 0xF) - carry) < 0;
 }
 
 inline bool half_carry_sub_16(uint16_t a, uint16_t b) {
     return (a & 0x0FFF) < (b & 0x0FFF);
 }
 
-inline uint16_t pair(uint8_t hi, uint8_t lo) {
+inline uint16_t pair(uint8_t& hi, uint8_t lo) {
     return (static_cast<uint16_t>(hi) << 8) | lo;
 }
 inline uint8_t rot_left_circ(uint8_t num, bool& carry) {

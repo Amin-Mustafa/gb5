@@ -18,11 +18,6 @@ void SerialPort::serial_write(uint16_t addr, uint8_t val){
             break;
         case 0xFF02: 
             serial[1] = val;
-            //send data to destination if transfer is enabled (bit 7 set)
-            if(val & 0x80) {
-                destination_buffer.push_back(serial[0]); 
-                serial[1] &= ~0x80; //clear bit 7 (transfer complete)
-            }   
             break;
         default: break;
     }

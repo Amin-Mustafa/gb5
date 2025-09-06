@@ -47,6 +47,8 @@ void Disassembler::disassemble_at(uint16_t pos) {
         case 0x01: case 0x11: case 0x21: case 0x31:
             cout << format("LD {}, ${:02x}{:02x}", reg_pairs[opcode>>4], BYTE2, BYTE1); 
             break;
+        
+        case 0x10: cout << "STOP";
 
         case 0x02: case 0x12: case 0x22: case 0x32:
             cout << format("LD {}, A", mem_pairs[opcode>>4]);
@@ -119,12 +121,18 @@ void Disassembler::disassemble_at(uint16_t pos) {
             cout << format("CALL {}, ${:02x}{:02x}", control_conditions[(opcode - 0xC4)/8], BYTE2, BYTE1);
             break;
 
-        case 0xC1: case 0xD1: case 0xE1: case 0xF1:
+        case 0xC1: case 0xD1: case 0xE1:
             cout << format("POP {}", reg_pairs[(opcode>>4) - 0xC]);
             break;
+        case 0xF1:
+            cout << "POP AF";
+            break;
 
-        case 0xC5: case 0xD5: case 0xE5: case 0xF5:
+        case 0xC5: case 0xD5: case 0xE5:
             cout << format("PUSH {}", reg_pairs[(opcode>>4) - 0xC]);
+            break;
+        case 0xF5:
+            cout << "PUSH AF";
             break;
         
         case 0xC6: case 0xD6: case 0xE6: case 0xF6:
@@ -138,7 +146,7 @@ void Disassembler::disassemble_at(uint16_t pos) {
             break;
 
         case 0xCB: 
-            disassemble_prefix_op(BYTE1);
+            cout << "PREFIX";
             break;
         
         case 0xE0: cout << format("LDH  [${:02x}], A", BYTE1);    break;
@@ -169,6 +177,7 @@ void Disassembler::disassemble_prefix_op(uint8_t opcode) {
     static std::string registers[] = {"B", "C", "D", "E", "H", "L", "[HL]", "A"};
     static std::string shift_ops[] = {"RLC", "RRC", "RL", "RR", "SLA", "SRA", "SWAP"};
 
+    std::cout << std::format("$0x{:02x}\t", opcode);
     if(opcode >= 0x00 && opcode <= 0x3F) {
         std::cout << std::format("{} {}", shift_ops[opcode / 8], registers[opcode % 8]);
     }
@@ -181,4 +190,6 @@ void Disassembler::disassemble_prefix_op(uint8_t opcode) {
     if(opcode >= 0xC0 && opcode <= 0xFF) {
         std::cout << std::format("SET {} {}", (opcode - 0x40) / 8, opcode % 8);
     }
+
+    std::cout << std::endl;
 }
