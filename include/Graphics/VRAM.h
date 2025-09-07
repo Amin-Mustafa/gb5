@@ -11,7 +11,7 @@ class VRAM {
 private:
     std::array<uint8_t, 0x2000> data;
     MemoryRegion region;
-
+    
 public:
     VRAM(MMU& mmu);
     uint8_t read(uint16_t addr);

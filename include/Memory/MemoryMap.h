@@ -18,7 +18,10 @@ struct MemoryMap {
     InterruptController interrupt_controller;
 
     MemoryMap(MMU& mmu) 
-        :rom{mmu}, ram{mmu, 0x8000, 0xFFFF}, serial_port{mmu}, interrupt_controller{mmu} {}
+        :rom{mmu},
+         ram{mmu, 0x8000, 0xFFFF}, 
+         serial_port{mmu}, 
+         interrupt_controller{mmu} {}
 };
 
 #endif
