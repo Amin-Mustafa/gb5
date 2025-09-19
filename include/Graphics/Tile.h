@@ -16,14 +16,17 @@ private:
     //the first 2 bytes are the "front" and "back" of the first line
     //the second 2 bytes are those of the second line, etc.
     std::span<const uint8_t, 16> data;
+    static constexpr uint8_t init[16] = {0};
 public:
+    Tile()
+        :data{init, 16} {}
     Tile(const uint8_t* tile_data)
         :data{tile_data, 16} {}
     
     uint8_t get_pixel(uint8_t x, uint8_t y) const {
         //xth pixel from the left of yth row
-        return ( ((data[y + 1] >> x) & (uint8_t)1) << 1) |
-                ((data[y] >> x) & (uint8_t)1);
+        return ( ((data[2*y + 1] >> x) & (uint8_t)1) << 1) |
+                ((data[2*y] >> x) & (uint8_t)1);
     }
 };
 

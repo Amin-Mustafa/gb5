@@ -6,37 +6,49 @@
 #include "OAM.h"
 #include "PPURegs.h"
 #include "../../include/Memory/MemoryRegion.h"
+#include "PixelFetcher.h"
+#include "LCD.h"
+#include "FIFO.h"
 
 class MMU;
 class InterruptController;
+class LCD;
 
 class PPU {
 private:
+    //memory
     VRAM vram;
     OAM oam;
-
-    //hardware registers
-    enum Register {
-        LCDC, STAT, SCY, SCX, LY, LYC, DMA, BGP, OBP0, OBP1, WY, WX
-    };
     PPURegs regs;
+
+    //drawing facilities
+    PixelFetcher bg_fetcher;
+    FIFO bg_fifo;
+    int scanline_x; 
+    std::unique_ptr<LCD> screen;
+    bool in_window() const;
     
-    int cycles; 
+    unsigned int cycles; 
     InterruptController& ic;
-public:
-    using StateFunction = void (PPU::*)();  //pointer to state function
-    StateFunction current_state;
-
-    PPU(MMU& mmu, InterruptController& interrupt_controller);
-
-    //PPU is clocked in t-states (4 t-state = 1 m-cycle)
-    void tick() {(this->*current_state)();}
 
     //PPU states
     void oam_scan();
-    void drawing();
+    void pixel_transfer();
     void h_blank();
     void v_blank();
+
+public:
+    PPU(MMU& mmu, InterruptController& interrupt_controller);
+
+    using StateFunction = void (PPU::*)();  //pointer to state function
+    StateFunction current_state;
+    //PPU is clocked in t-states (4 t-state = 1 m-cycle)
+    void tick() {
+        (this->*current_state)();
+        cycles++;
+    }
+
+    void print_state();
 };  
 
 #endif

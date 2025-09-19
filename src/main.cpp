@@ -3,6 +3,7 @@
 
 #include "../include/CPU.h"
 #include "../include/Disassembler.h"
+#include "../include/Graphics/PPU.h"
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -19,14 +20,16 @@ int main() {
     MMU mem;
     MemoryMap map(mem);
     CPU cpu(mem, map.interrupt_controller);
+    PPU ppu(mem, map.interrupt_controller);
     Disassembler dis(mem);
 
     std::string cart = "../ROM/11-op a,(hl).gb";
 
-    mem.write(0xFF44, 0x90);    //assume for now that LY = 0x90
     map.rom.load(cart);
 
     while(true) {
-        cpu.tick();
+        ppu.print_state();
+        ppu.tick();
+        std::cin.get();
     }   
 }
