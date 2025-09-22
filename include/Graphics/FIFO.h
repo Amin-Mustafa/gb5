@@ -34,6 +34,7 @@ public:
         std::fill(data.begin(), data.end(), 0);
         head = 0;
         tail = data.size() - 1;
+        num_elements = 0;
     }
 
     //dbg stuff

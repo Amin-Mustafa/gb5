@@ -26,9 +26,10 @@ private:
     FIFO bg_fifo;
     int scanline_x; 
     std::unique_ptr<LCD> screen;
-    bool in_window() const;
+    bool in_window;
+    bool window_triggered() const;
     
-    unsigned int cycles; 
+    unsigned int cycles; //cycles in current scanline (0 - 455) 
     InterruptController& ic;
 
     //PPU states

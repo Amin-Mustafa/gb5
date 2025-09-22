@@ -39,14 +39,15 @@ public:
     }
 
     //state functions
+    void init();    //fetcher takes 6 dots to wake up
     void get_tile_index();
     void get_tile();
     void get_tile_line();
     void push_to_fifo();
 
     //control
-    void reset();
-    void set_mode(Mode mode) {curr_mode = mode;}
+    void reset_fetch();
+    void set_mode(Mode mode);
     void set_position(uint8_t x, uint8_t y);
 
     //dbg stuff

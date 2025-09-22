@@ -5,16 +5,25 @@
 #include "../../include/Graphics/Tile.h"
 #include "../../include/Graphics/PPURegs.h"
 
-constexpr int GET_INDEX_START = 0;
-constexpr int GET_TILE_START = 2;
-constexpr int GET_LINE_START = 4;
-constexpr int PUSH_START = 6;
+constexpr int INIT_CYCLES = 6;
+constexpr int GET_INDEX_START = 0 + INIT_CYCLES;
+constexpr int GET_TILE_START = 2 + INIT_CYCLES;
+constexpr int GET_LINE_START = 4 + INIT_CYCLES;
+constexpr int PUSH_START = 6 + INIT_CYCLES;
+
 std::string fetcher_state_to_str(uint8_t dot);
 
 PixelFetcher::PixelFetcher(const VRAM& vram, const PPURegs& control, FIFO& fifo) 
     : vram{vram}, regs{control}, fifo{fifo},
-      curr_state{get_tile_index}
+      curr_state{ init }
     {}
+
+void PixelFetcher::init() {
+    //do nothing for 6 dots
+    if(cycles == GET_INDEX_START) {
+        curr_state = get_tile_index;
+    }
+}
 
 void PixelFetcher::get_tile_index() {
     if(cycles == GET_INDEX_START) {
@@ -23,19 +32,18 @@ void PixelFetcher::get_tile_index() {
     }
 
     //first step in fetch pipeline (2 dots)
-    uint8_t tile_x = x_pos / 8;
     uint8_t tile_y = y_pos / 8;
     Space::TileMap map = Space::TILEMAP_0;  //by default
 
-    /* if(curr_mode == Mode::WIN_FETCH) {
+    if(curr_mode == Mode::WIN_FETCH) {
         if(lcdc_win_tilemap(regs)) 
             map = Space::TILEMAP_1;
     }
     else if(lcdc_bg_tilemap(regs)) {
         map = Space::TILEMAP_1;
-    } */
+    } 
 
-    tile_index = vram.read(map + tile_y*0x20 + tile_x);
+    tile_index = vram.read(map + tile_y*0x20 + x_pos);
 
     curr_state = get_tile;
 }
@@ -48,8 +56,7 @@ void PixelFetcher::get_tile() {
     //second step in fetch pipeline (2 dots)
     using VRAM::AddressMode::SIGNED;
     using VRAM::AddressMode::UNSIGNED;
-    //VRAM::AddressMode mode = lcdc_bg_tile_area(regs) ? UNSIGNED : SIGNED;
-    VRAM::AddressMode mode = UNSIGNED;
+    VRAM::AddressMode mode = lcdc_bg_tile_area(regs) ? UNSIGNED : SIGNED;
 
     tile_data = vram.tile_at(tile_index, mode);
 
@@ -72,24 +79,30 @@ void PixelFetcher::get_tile_line() {
 
 void PixelFetcher::push_to_fifo(){
     if(fifo.empty()) {
-        std::cout << "Pushing...\n";
         for(size_t px = 0; px < queue.size(); ++px) {
             fifo.push(queue[px]);
         }
         //push successful
         //advance to next tile
-        set_position(x_pos + 8, y_pos);
-        reset();          //...go back to start
+        x_pos++;
+        reset_fetch();          //...go back to start
     }
 
     //otherwise, not yet empty; dont push
     return;
 }
 
-void PixelFetcher::reset() {
+void PixelFetcher::reset_fetch() {
     cycles = GET_INDEX_START;
     curr_state = get_tile_index;
     std::fill(queue.begin(), queue.end(), 0);
+}
+
+void PixelFetcher::set_mode(Mode mode) {
+    curr_mode = mode;
+    cycles = 0;
+    std::fill(queue.begin(), queue.end(), 0);
+    curr_state = init;
 }
 
 void PixelFetcher::set_position(uint8_t x, uint8_t y) {
@@ -97,11 +110,11 @@ void PixelFetcher::set_position(uint8_t x, uint8_t y) {
     //transform from screen-space to bg or window space
     switch(curr_mode) {
         case Mode::BG_FETCH:
-            x_pos = (x + regs.scx) & 0xFF;
+            x_pos = (x + regs.scx / 8) & 0x1F;
             y_pos = (y + regs.scy) & 0xFF;
             break;
         case Mode::WIN_FETCH:
-            x_pos = x - (regs.wx - 7);
+            x_pos = 0;
             y_pos = y - regs.wy;
             break;
 
@@ -129,6 +142,8 @@ void PixelFetcher::print_state() {
 }
 
 std::string fetcher_state_to_str(uint8_t dot) {
+    if(dot < GET_INDEX_START) 
+        return "INIT";
     if(dot < GET_TILE_START) 
         return "GET INDEX";
     if(dot < GET_LINE_START)

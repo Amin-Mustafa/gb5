@@ -28,7 +28,7 @@ int main() {
     map.rom.load(cart);
 
     while(true) {
-        ppu.print_state();
+        //ppu.print_state();
         ppu.tick();
         std::cin.get();
     }   

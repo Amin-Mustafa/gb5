@@ -6,7 +6,9 @@
 #include <iostream>
 #include <format>
 
-constexpr unsigned int MODE_3_PENALTY = 6;
+constexpr unsigned int SCANLINE_START = -1; 
+constexpr unsigned int SCANLINE_END = 455;
+constexpr unsigned int VBLANK_LINES = 10;
 
 PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
     :vram{mmu},
@@ -17,22 +19,33 @@ PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
      ic{interrupt_controller},
      current_state{ pixel_transfer }
      {
+        regs.scx = 10;
+        regs.scy = 1;
         bg_fetcher.set_position(scanline_x, regs.ly);
      }
 
-bool PPU::in_window() const {
-    return lcdc_win_enable(regs)    &&
-           regs.wy == regs.ly       &&
-           scanline_x >= regs.wx - 7;
+bool PPU::window_triggered() const {
+    return  (!in_window)            &&
+            (lcdc_win_enable(regs)) &&
+            (regs.ly == regs.wy)    &&
+            (scanline_x >= regs.wx - 7);           
 }    
 
 void PPU::pixel_transfer() {
+    //check if reached window
+    if(window_triggered()) {
+        in_window = true;
+        bg_fetcher.set_mode(PixelFetcher::Mode::WIN_FETCH);
+        //transform coordinates into window space
+        bg_fetcher.set_position(scanline_x, regs.ly);
+    }
+
     bg_fetcher.tick();
 
     // if no pixels ready -> nothing to do
     if(bg_fifo.empty()) {
         return; 
-    }
+    } 
     
     // otherwise start drawing
     // take a pixel from the FIFO
@@ -54,12 +67,44 @@ void PPU::pixel_transfer() {
 }
 
 void PPU::h_blank() {
-    //TODO:
+    if(cycles < SCANLINE_END) {
+        //do nothing until dot number 455
+        return;
+    }
+
+    //prepare to draw next scanline 
     regs.ly++;
     scanline_x = 0;
-    bg_fetcher.reset();
+    bg_fetcher.set_mode(PixelFetcher::Mode::BG_FETCH);
     bg_fetcher.set_position(scanline_x, regs.ly);
-    current_state = pixel_transfer;
+    bg_fifo.clear();
+
+    in_window = false;
+    
+    cycles = SCANLINE_START;
+    current_state = pixel_transfer; //TODO: OAM SCAN
+
+    if(regs.ly == screen->height()) {
+        current_state = v_blank;
+    }
+}
+
+void PPU::v_blank() {
+    if(cycles < SCANLINE_END) {
+        //do nothing until end of scanline
+        return;
+    }
+    regs.ly++;
+    cycles = SCANLINE_START;
+
+    if(regs.ly == screen->height() + VBLANK_LINES) {
+        regs.ly = 0;
+        bg_fetcher.set_mode(PixelFetcher::Mode::BG_FETCH);
+        bg_fetcher.set_position(scanline_x, regs.ly);
+        bg_fifo.clear();
+
+        current_state = pixel_transfer;
+    }
 }
 
 void PPU::print_state() {
