@@ -14,18 +14,29 @@ bool InterruptController::active() {
     return (irq.get() & ie.get() & 0x1F);
 }
 
-bool InterruptController::requested(Interrupt kind) {
-    return Arithmetic::bit_check(irq.get(), kind);
-}
-
 void InterruptController::clear(Interrupt kind) {
-    irq.set(Arithmetic::bit_clear(irq.get(), kind));
+    irq.set( Arithmetic::bit_clear(irq.get(), static_cast<uint8_t>(kind)) );
 }
 
 void InterruptController::request(Interrupt kind) {
-    irq.set(Arithmetic::bit_set(irq.get(), kind));
+    irq.set( Arithmetic::bit_set(irq.get(), static_cast<uint8_t>(kind)) );
 }
 
-uint16_t InterruptController::service_addr(Interrupt kind) {
-    return 0x40 + (kind * 0x08);
+Interrupt InterruptController::pending() {
+    using Arithmetic::bit_check;
+
+    bool requested;
+    bool enabled;
+    uint8_t index;
+
+    for(Interrupt src : sources) {
+        index = static_cast<uint8_t>(src);
+        requested = bit_check(irq.get(), index);
+        enabled = bit_check(ie.get(), index);
+        if(requested && enabled) {
+            return src;
+        }
+    }
+
+    return Interrupt::NULL_INTERRUPT;
 }

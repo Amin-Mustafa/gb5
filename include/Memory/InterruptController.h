@@ -2,27 +2,38 @@
 #define INTERRUPTCONTROLLER_H
 
 #include <cstdint>
+#include <array>
 #include "MappedRegister.h"
 
 class MMU;
 class Instruction;
 class CPU;
 
+
+enum class Interrupt : uint8_t {
+    VBLANK = 0, LCD, SERIAL, TIMER, JOYPAD,
+    NULL_INTERRUPT //in case of error
+};
+
 class InterruptController {
 private:
     MappedRegister irq; 
     MappedRegister ie;
-public:
-    enum Interrupt {
-        VBLANK = 0, LCD, SERIAL, TIMER, JOYPAD, num_interrupts
+    static constexpr std::array<Interrupt, 5> sources = {
+        Interrupt::VBLANK,
+        Interrupt::LCD,
+        Interrupt::SERIAL,
+        Interrupt::TIMER,
+        Interrupt::JOYPAD
     };
-
+    
+public:
     InterruptController(MMU& mem);
     bool active();
-    bool requested(Interrupt kind);
     void request(Interrupt kind);
     void clear(Interrupt kind);
-    uint16_t service_addr(Interrupt kind);
+
+    Interrupt pending();
 };
 
 #endif

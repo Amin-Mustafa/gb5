@@ -3,9 +3,7 @@
 #include "../include/Memory/MMU.h"
 #include "../include/CPU.h"
 
-uint16_t pair(uint8_t hi, uint8_t lo) {
-    return ((uint16_t)hi << 8 ) | lo;
-}
+using Arithmetic::pair;
 
 struct Pair {
     uint8_t& hi;
@@ -770,7 +768,9 @@ Instruction DI() {
 }
 Instruction EI() {
     return Instruction {
-        [](CPU& cpu) {cpu.IME = true;}
+        [](CPU& cpu) {
+            cpu.int_enable_pending = true;
+        }
     };
 }
 

@@ -12,6 +12,7 @@ class MMU;
 class Instruction;
 class Decoder;
 class InterruptController;
+enum class Interrupt : uint8_t;
 
 enum class Flag {
     CARRY = 4, HALF_CARRY, NEGATIVE, ZERO
@@ -52,6 +53,7 @@ public: //data
     //data registers
     uint8_t A, B, C, D, E, H, L, F;
     bool IME = false;
+    bool int_enable_pending = false;
 
     struct {
         uint8_t W, Z;
@@ -66,12 +68,14 @@ private:
 
     //CPU states
     StateFunction current_state;
-    void fetch_and_execute();
+    void initial_fetch();
+    void execute_fetch();
     void interrupted();
 
     //execution
     Instruction* fetch_inst();
     void execute_inst();
+    bool interrupt_pending();
     bool cb_mode = false;
 
     //facilities
