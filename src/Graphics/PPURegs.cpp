@@ -11,7 +11,22 @@ PPURegs::PPURegs(MMU& mmu)
         [this](uint16_t addr) { return read(addr); },
         [this](uint16_t addr, uint8_t val) { return write(addr, val); }
     }
-    {}
+    {
+        //defaults
+        lcdc    = 0x91;
+        stat    = 0x85;
+        scy     = 0x00;
+        scx     = 0x00;
+        ly      = 0x00;
+        lyc     = 0x00;
+        dma     = 0xFF;
+        bgp     = 0xE4;
+        obp_0   = 0x00;
+        obp_1   = 0x00;
+        wy      = 0x00;
+        wx      = 0x00;
+
+    }
 
 uint8_t PPURegs::read(uint16_t addr) const {
     switch(addr) {

@@ -25,7 +25,7 @@ private:
     PixelFetcher bg_fetcher;
     FIFO bg_fifo;
     int scanline_x; 
-    std::unique_ptr<LCD> screen;
+    LCD* screen;
     bool in_window;
     bool window_triggered() const;
     
@@ -40,6 +40,10 @@ private:
 
 public:
     PPU(MMU& mmu, InterruptController& interrupt_controller);
+    
+    void connect_display(LCD* display) {
+        screen = display;
+    }
 
     using StateFunction = void (PPU::*)();  //pointer to state function
     StateFunction current_state;

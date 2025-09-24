@@ -10,17 +10,16 @@ constexpr unsigned int SCANLINE_START = -1;
 constexpr unsigned int SCANLINE_END = 455;
 constexpr unsigned int VBLANK_LINES = 10;
 
+uint8_t display_color(uint8_t palette, uint8_t px);
+
 PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
     :vram{mmu},
      oam{mmu},
      regs{mmu}, 
      bg_fetcher{vram, regs, bg_fifo},
-     screen{std::make_unique<LCD>()},
      ic{interrupt_controller},
      current_state{ pixel_transfer }
      {
-        regs.scx = 10;
-        regs.scy = 1;
         bg_fetcher.set_position(scanline_x, regs.ly);
      }
 
@@ -55,9 +54,10 @@ void PPU::pixel_transfer() {
     scanline_x++;
 
     // pos < 0 means there are pixels in the FIFO "behind" the screen
-    if(pos >= 0) {
+    if(pos >= 0 && screen != nullptr) {
         //reached left edge of screen
-        screen->blit(px, pos, regs.ly);
+        uint8_t display_px = display_color(regs.bgp, px);
+        screen->blit(display_px, pos, regs.ly);
     }
     
     if(pos >= screen->width() - 1) {
@@ -130,3 +130,7 @@ void PPU::print_state() {
     bg_fifo.print();
 }
 
+uint8_t display_color(uint8_t palette, uint8_t px) {
+    if(px > 0x03) return 0;
+    return (palette >> (2*px)) & (uint8_t)3;
+}
