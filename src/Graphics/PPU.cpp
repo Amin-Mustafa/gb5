@@ -8,6 +8,7 @@
 
 constexpr unsigned int SCANLINE_START = -1; 
 constexpr unsigned int SCANLINE_END = 455;
+constexpr unsigned int OAM_SCAN_END = 79;
 constexpr unsigned int VBLANK_LINES = 10;
 
 uint8_t display_color(uint8_t palette, uint8_t px);
@@ -18,7 +19,7 @@ PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
      regs{mmu}, 
      bg_fetcher{vram, regs, bg_fifo},
      ic{interrupt_controller},
-     current_state{ pixel_transfer }
+     current_state{ oam_scan }
      {
         bg_fetcher.set_position(scanline_x, regs.ly);
      }
@@ -30,7 +31,17 @@ bool PPU::window_triggered() const {
             (scanline_x >= regs.wx - 7);           
 }    
 
+void PPU::oam_scan() {
+    std::cout << "STATE: OAM SCAN" << "\n\n";
+    //TODO oam scan
+    if(cycles < OAM_SCAN_END) {
+        return;
+    }
+    current_state = pixel_transfer;
+}
+
 void PPU::pixel_transfer() {
+    std::cout << "STATE: PIXEL TRANSFER" << "\n\n";
     //check if reached window
     if(window_triggered()) {
         in_window = true;
@@ -67,6 +78,7 @@ void PPU::pixel_transfer() {
 }
 
 void PPU::h_blank() {
+    std::cout << "STATE: H BLANK" << "\n\n";
     if(cycles < SCANLINE_END) {
         //do nothing until dot number 455
         return;
@@ -82,7 +94,7 @@ void PPU::h_blank() {
     in_window = false;
     
     cycles = SCANLINE_START;
-    current_state = pixel_transfer; //TODO: OAM SCAN
+    current_state = oam_scan; 
 
     if(regs.ly == screen->height()) {
         current_state = v_blank;
@@ -90,6 +102,7 @@ void PPU::h_blank() {
 }
 
 void PPU::v_blank() {
+    std::cout << "STATE: V BLANK" << "\n\n";
     if(cycles < SCANLINE_END) {
         //do nothing until end of scanline
         return;
@@ -103,7 +116,7 @@ void PPU::v_blank() {
         bg_fetcher.set_position(scanline_x, regs.ly);
         bg_fifo.clear();
 
-        current_state = pixel_transfer;
+        current_state = oam_scan;
     }
 }
 
