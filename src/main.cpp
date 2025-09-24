@@ -4,16 +4,6 @@
 #include "../include/Disassembler.h"
 #include "../include/Graphics/PPU.h"
 #include <iostream>
-#include <fstream>
-#include <algorithm>
-
-long line_count(const std::string& filename) {
-    std::fstream fs;
-    fs.open(filename);
-    auto count = std::count_if(std::istreambuf_iterator<char>{fs}, {}, [](char c) { return c == '\n'; });
-    return count;
-    fs.close();
-}
 
 int main(int argc, char* argv[]) {
     MMU mem;
@@ -23,7 +13,7 @@ int main(int argc, char* argv[]) {
     Disassembler dis(mem);
     LCD display(3);
 
-    std::string cart = "../ROM/11-op a,(hl).gb";
+    std::string cart = "../ROM/test.gb";
 
     map.rom.load(cart);
     ppu.connect_display(&display);

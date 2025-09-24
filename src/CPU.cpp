@@ -10,26 +10,12 @@
 #include "../include/Disassembler.h"
 #include "../include/Memory/InterruptController.h"
 
-constexpr uint16_t pair(uint8_t hi, uint8_t lo) {
-    return (hi << 8) | lo;
-}
-constexpr void inc_pair(uint8_t& hi, uint8_t& lo){
-    uint16_t pair = (hi << 8) | lo;
-    pair++;
-    hi = pair >> 8;
-    lo = pair & 0xff;
-}
-constexpr void dec_pair(uint8_t& hi, uint8_t& lo){
-    uint16_t pair = (hi << 8) | lo;
-    pair--;
-    hi = pair >> 8;
-    lo = pair & 0xff;
-}
+using Arithmetic::pair;
 
 CPU::CPU(MMU& mmu, InterruptController& interrupt_controller):
     pc{0xFF}, sp{0xFFFE},
     A{0x01}, B{0x00}, C{0x13}, D{0x00}, E{0xD8}, H{0x01}, L{0x4D}, F{0xB0},
-    current_state{fetch_and_execute},
+    current_state{initial_fetch},
     mmu{mmu},
     interrupt_controller{interrupt_controller},
     decoder{std::make_unique<Decoder>(*this)},
@@ -51,12 +37,17 @@ uint8_t CPU::fetch_byte() {
 }
 
 Instruction* CPU::fetch_inst() {
+    static Disassembler dis(mmu);
+
     uint8_t opcode = fetch_byte();
     if(cb_mode) {
         cb_mode = false;
+        dis.disassemble_prefix_op(opcode);
+        print_state();
         return decoder->decode_cb(opcode);
     }
-
+    dis.disassemble_at(pc);
+    print_state();
     return decoder->decode(opcode);
 }
 
@@ -68,19 +59,54 @@ void CPU::execute_inst() {
     current_inst->execute_subop(*this, cycles);
 }
 
-void CPU::fetch_and_execute() {
-    if(cycles == 0) {
-        //fetch instruction and execute first subop in first tick
-        current_inst = fetch_inst();
-    }
+void CPU::initial_fetch() {
+    //fetch first instruction
+    current_inst = fetch_inst();
 
+    //begin execute fetch cycle
+    current_state = execute_fetch;  
+}
+
+void CPU::execute_fetch() {
     execute_inst();
     cycles++;
 
     if(cycles >= current_inst->length()) {
-        //once reach end, fetch next instruction
+        //once reach end, fetch next instruction in same cycle
         cycles = 0;
+        current_inst = fetch_inst();
+        if(int_enable_pending) {
+            int_enable_pending = false;
+            IME = true;
+        }
+        if(interrupt_pending()) {
+            current_state = interrupted;
+        }
     }
+}
+
+bool CPU::interrupt_pending() {
+    return IME && interrupt_controller.active();
+}
+
+void CPU::interrupted() {
+    //replace next instruction with the isr of pending interrupt
+    Interrupt pending_int = interrupt_controller.pending();
+
+    IME = false;
+    interrupt_controller.clear(pending_int);
+
+    switch(pending_int) {
+        case Interrupt::VBLANK  : std::cout << "VBLANK INTERRUPT"   << '\n';    break;
+        case Interrupt::LCD     : std::cout << "LCD INTERRUPT"      << '\n';    break;
+        case Interrupt::SERIAL  : std::cout << "SERIAL INTERRUPT"   << '\n';    break;
+        case Interrupt::TIMER   : std::cout << "TIMER INTERRUPT"    << '\n';    break;
+        case Interrupt::JOYPAD  : std::cout << "JOYPAD INTERRUPT"   << '\n';    break;
+        default: break;
+    }
+
+    current_inst = decoder->isr(pending_int);
+    current_state = execute_fetch;
 }
 
 void CPU::print_state(){
@@ -91,7 +117,7 @@ void CPU::print_state(){
             A, B, C, D, E, H, L
         )
         <<
-        std::format("[HL]:{:02x}, [DE]:{:02x}, ", mmu.read(pair(H, L)), mmu.read(pair(D,E))) 
+        std::format("[HL]:{:02x}, IME:{}, ", mmu.read(pair(H, L)), IME) 
         <<
         std::format(
             "PC:{:04x}, SP:{:04x}, F:{:d}{:d}{:d}{:d}\n", pc, sp, get_flag(Flag::ZERO),

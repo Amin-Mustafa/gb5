@@ -2,6 +2,8 @@
 #include "../include/CPU.h"
 #include "../include/Instruction.h"
 #include "../include/Arithmetic.h"
+#include "../include/Memory/InterruptController.h"
+
 
 using std::ref;
 using namespace Operation;
@@ -18,6 +20,7 @@ Decoder::Decoder(CPU& cpu)
     {
         init_instruction_table(cpu);
         init_cb_table(cpu);
+        init_ivt(cpu);
     }
     
 void Decoder::init_instruction_table(CPU& cpu) {
@@ -355,4 +358,12 @@ void Decoder::init_cb_table(CPU& cpu) {
         if(reg) cb_table[i] = SET_r(*reg, (i - 0xC0) / 8);
         else    cb_table[i] = SET_m((i - 0xC0) / 8);
     }
+}
+
+void Decoder::init_ivt(CPU& cpu) {
+    ivt[static_cast<uint8_t>(Interrupt::VBLANK)]    = RST(0x40);
+    ivt[static_cast<uint8_t>(Interrupt::LCD)]       = RST(0x48);
+    ivt[static_cast<uint8_t>(Interrupt::SERIAL)]    = RST(0x50);
+    ivt[static_cast<uint8_t>(Interrupt::TIMER)]     = RST(0x58);
+    ivt[static_cast<uint8_t>(Interrupt::JOYPAD)]    = RST(0x60);
 }
