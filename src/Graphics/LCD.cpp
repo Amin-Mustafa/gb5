@@ -78,6 +78,7 @@ void LCD::draw_frame() {
         buffer.data(),
         SCREEN_WIDTH * sizeof(PixelFormat)
     );
+    SDL_RenderClear(renderer.get());
     SDL_RenderCopy(renderer.get(), texture.get(), nullptr, nullptr);
 	SDL_RenderPresent(renderer.get());	
 }

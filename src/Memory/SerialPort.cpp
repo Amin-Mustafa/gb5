@@ -29,4 +29,7 @@ SerialPort::SerialPort(MMU& mmu)
         0xFF01, 0xFF02,
         [this](uint16_t addr){return serial_read(addr);},
         [this](uint16_t addr, uint8_t val) { serial_write(addr,val); }
-    } {}
+    } {
+        serial[0] = 0x00;
+        serial[1] = 0x7E;
+    }

@@ -31,23 +31,23 @@ void CPU::write_memory(uint16_t addr, uint8_t val) {
     mmu.write(addr, val); 
 }
 uint8_t CPU::fetch_byte() {
-    pc++;
+    if(!halt_bug) {
+        //the halt bug prevents the pc from increasing for one cycle
+        pc++;   
+    } else {
+        halt_bug = false;
+    }
     uint8_t byte = read_memory(pc);
     return byte;
 }
 
 Instruction* CPU::fetch_inst() {
-    static Disassembler dis(mmu);
-
     uint8_t opcode = fetch_byte();
+
     if(cb_mode) {
         cb_mode = false;
-        dis.disassemble_prefix_op(opcode);
-        print_state();
         return decoder->decode_cb(opcode);
     }
-    dis.disassemble_at(pc);
-    print_state();
     return decoder->decode(opcode);
 }
 
@@ -79,14 +79,10 @@ void CPU::execute_fetch() {
             int_enable_pending = false;
             IME = true;
         }
-        if(interrupt_pending()) {
+        if(IME && interrupt_controller.active()) {
             current_state = interrupted;
         }
     }
-}
-
-bool CPU::interrupt_pending() {
-    return IME && interrupt_controller.active();
 }
 
 void CPU::interrupted() {
@@ -96,28 +92,55 @@ void CPU::interrupted() {
     IME = false;
     interrupt_controller.clear(pending_int);
 
-    switch(pending_int) {
+/*     switch(pending_int) {
         case Interrupt::VBLANK  : std::cout << "VBLANK INTERRUPT"   << '\n';    break;
         case Interrupt::LCD     : std::cout << "LCD INTERRUPT"      << '\n';    break;
         case Interrupt::SERIAL  : std::cout << "SERIAL INTERRUPT"   << '\n';    break;
         case Interrupt::TIMER   : std::cout << "TIMER INTERRUPT"    << '\n';    break;
         case Interrupt::JOYPAD  : std::cout << "JOYPAD INTERRUPT"   << '\n';    break;
         default: break;
-    }
+    } */
 
     current_inst = decoder->isr(pending_int);
     current_state = execute_fetch;
+}
+
+void CPU::halted() {
+    //check interrupts every cycle
+    bool pending = interrupt_controller.active();
+    if(pending) {
+        if(IME) {
+            //service the interrupt
+            current_state = interrupted;
+        } else {
+            //execute the instruction after HALT
+            current_state = execute_fetch;
+        }
+    }
+}
+
+void CPU::halt() {
+    if(!IME && interrupt_controller.active()) {
+        //HALT bug
+        //do not enter HALT state at all
+        current_inst  = fetch_inst();         
+        current_state = execute_fetch;
+        //pc not incremented after executing next instruction
+        halt_bug = true;
+    } else {
+        current_state = halted;
+    }
 }
 
 void CPU::print_state(){
     using std::format;
     std::cout << 
         std::format(
-            "A:{:02x}, B:{:02x}, C:{:02x}, D:{:02x}, E:{:02x}, H:{:02x}, L:{:02x}, ",
-            A, B, C, D, E, H, L
+            "A:{:02x}, B:{:02x}, C:{:02x}, D:{:02x}, E:{:02x}, H:{:02x}, L:{:02x}, [HL]:{:02x} ",
+            A, B, C, D, E, H, L, mmu.read(pair(H,L))
         )
         <<
-        std::format("[HL]:{:02x}, IME:{}, ", mmu.read(pair(H, L)), IME) 
+        std::format("IF:{:02x}, IE:{:02x}, IME:{}, ", mmu.read(0xFF0F), mmu.read(0xFFFF), IME) 
         <<
         std::format(
             "PC:{:04x}, SP:{:04x}, F:{:d}{:d}{:d}{:d}\n", pc, sp, get_flag(Flag::ZERO),

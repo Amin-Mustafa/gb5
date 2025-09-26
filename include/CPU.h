@@ -45,6 +45,7 @@ public: //methods
     //skip to end of instruction
     void skip_inst() {skip_to_inst_end = true;}
     void prefix_mode() {cb_mode = true;}
+    void halt();
 
 public: //data
     //program counter and stack pointer
@@ -71,12 +72,13 @@ private:
     void initial_fetch();
     void execute_fetch();
     void interrupted();
+    void halted();
 
     //execution
     Instruction* fetch_inst();
     void execute_inst();
-    bool interrupt_pending();
     bool cb_mode = false;
+    bool halt_bug = false;
 
     //facilities
     MMU& mmu;

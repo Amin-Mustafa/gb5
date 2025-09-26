@@ -5,7 +5,12 @@ OAM::OAM(MMU& mmu)
     :region{
         mmu,
         START, END,
-        [this](uint16_t addr) {return read(addr);},
-        [this](uint16_t addr, uint8_t val) {return write(addr, val);}
+        [this](uint16_t addr)->uint8_t{
+            if(accessible) return read(addr);
+            else return 0xFF;
+        },
+        [this](uint16_t addr, uint8_t val) {
+            if(accessible) write(addr, val);
+        }
     }
     {}

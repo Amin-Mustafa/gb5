@@ -124,6 +124,7 @@ Instruction RST(uint8_t addr);
 //--------------------------MISC------------------------//
 Instruction DI();
 Instruction EI();
+Instruction HALT();
 }   //Operation
 
 #endif

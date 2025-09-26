@@ -15,7 +15,7 @@ private:
     MemoryRegion region;
 public:
     MappedRegister(MMU& mmu, uint16_t addr);
-    uint8_t get() {return data;}
+    uint8_t get() const {return data;}
     void set(uint8_t val) {data = val;}
 };
 

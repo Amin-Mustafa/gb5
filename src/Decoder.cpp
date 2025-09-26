@@ -151,7 +151,7 @@ void Decoder::init_instruction_table(CPU& cpu) {
     inst_table[0x73] = LD_m_r(cpu.H, cpu.L, cpu.E);       
     inst_table[0x74] = LD_m_r(cpu.H, cpu.L, cpu.H);       
     inst_table[0x75] = LD_m_r(cpu.H, cpu.L, cpu.L);      
-    inst_table[0x76] = NOP();   //TODO HALT         
+    inst_table[0x76] = HALT();        
     inst_table[0x77] = LD_m_r(cpu.H, cpu.L, cpu.A);    
     inst_table[0x78] = LD_r_r(cpu.A, cpu.B);      
     inst_table[0x79] = LD_r_r(cpu.A, cpu.C);     

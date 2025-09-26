@@ -5,13 +5,16 @@
 #include "../../include/Graphics/Tile.h"
 #include "../../include/Graphics/PPURegs.h"
 
+#include <iostream>
+#include <format>
+
 constexpr int INIT_CYCLES = 6;
 constexpr int GET_INDEX_START = 0 + INIT_CYCLES;
 constexpr int GET_TILE_START = 2 + INIT_CYCLES;
 constexpr int GET_LINE_START = 4 + INIT_CYCLES;
 constexpr int PUSH_START = 6 + INIT_CYCLES;
 
-std::string fetcher_state_to_str(uint8_t dot);
+const std::string fetcher_state_to_str(uint8_t dot);
 
 PixelFetcher::PixelFetcher(const VRAM& vram, const PPURegs& control, FIFO& fifo) 
     : vram{vram}, regs{control}, fifo{fifo},
@@ -35,12 +38,14 @@ void PixelFetcher::get_tile_index() {
     uint8_t tile_y = y_pos / 8;
     Space::TileMap map = Space::TILEMAP_0;  //by default
 
-    if(curr_mode == Mode::WIN_FETCH) {
-        if(lcdc_win_tilemap(regs)) 
-            map = Space::TILEMAP_1;
-    }
-    else if(lcdc_bg_tilemap(regs)) {
-        map = Space::TILEMAP_1;
+    switch(curr_mode) {
+        case Mode::BG_FETCH:
+            map = LCDC::bg_tilemap(regs) ? Space::TILEMAP_1 : Space::TILEMAP_0;
+            break;
+        case Mode::WIN_FETCH:
+            map = LCDC::win_tilemap(regs) ? Space::TILEMAP_1 : Space::TILEMAP_0;
+            break;
+        default: break;
     } 
 
     tile_index = vram.read(map + tile_y*0x20 + x_pos);
@@ -56,7 +61,7 @@ void PixelFetcher::get_tile() {
     //second step in fetch pipeline (2 dots)
     using VRAM::AddressMode::SIGNED;
     using VRAM::AddressMode::UNSIGNED;
-    VRAM::AddressMode mode = lcdc_bg_tile_area(regs) ? UNSIGNED : SIGNED;
+    VRAM::AddressMode mode = LCDC::bg_tile_area(regs) ? UNSIGNED : SIGNED;
 
     tile_data = vram.tile_at(tile_index, mode);
 
@@ -141,7 +146,7 @@ void PixelFetcher::print_state() {
     std::cout << std::endl;
 }
 
-std::string fetcher_state_to_str(uint8_t dot) {
+const std::string fetcher_state_to_str(uint8_t dot) {
     if(dot < GET_INDEX_START) 
         return "INIT";
     if(dot < GET_TILE_START) 

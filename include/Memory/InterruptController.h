@@ -16,7 +16,7 @@ enum class Interrupt : uint8_t {
 };
 
 class InterruptController {
-private:
+public:
     MappedRegister irq; 
     MappedRegister ie;
     static constexpr std::array<Interrupt, 5> sources = {

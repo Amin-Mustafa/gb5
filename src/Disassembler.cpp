@@ -165,6 +165,8 @@ void Disassembler::disassemble_at(uint16_t pos) {
 
         case 0xF3: cout << "DI"; break;
         case 0xFB: cout << "EI"; break;
+        case 0x76: cout << "HALT"; break;
+        
         default: cout << "UNIMPLEMENTED INSTRUCTION"; break;
     }
     cout << "\t";

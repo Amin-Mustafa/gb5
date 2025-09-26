@@ -2,13 +2,18 @@
 #include "../../include/Memory/MMU.h"
 #include "../../include/Memory/InterruptController.h"
 #include "../../include/Graphics/Spaces.h"
+#include "../../include/Graphics/LCD.h"
 #include "../../include/Arithmetic.h"
 #include <iostream>
 #include <format>
 
 constexpr unsigned int SCANLINE_START = -1; 
 constexpr unsigned int SCANLINE_END = 455;
+constexpr unsigned int OAM_SCAN_START = 0;
 constexpr unsigned int OAM_SCAN_END = 79;
+constexpr unsigned int VBLANK_START = 0;
+constexpr unsigned int VBLANK_END = 4559;
+constexpr unsigned int PIXEL_TRANSFER_START = 80;
 constexpr unsigned int VBLANK_LINES = 10;
 
 uint8_t display_color(uint8_t palette, uint8_t px);
@@ -24,15 +29,47 @@ PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
         bg_fetcher.set_position(scanline_x, regs.ly);
      }
 
+void PPU::tick() {
+    (this->*current_state)();
+    //check if stat trigger executed
+    if(stat_trigger.rising_edge(STAT::stat_line(regs))) {
+        ic.request(Interrupt::LCD);
+    }
+    cycles++;
+}
+
 bool PPU::window_triggered() const {
     return  (!in_window)            &&
-            (lcdc_win_enable(regs)) &&
+            (LCDC::win_enable(regs)) &&
             (regs.ly == regs.wy)    &&
             (scanline_x >= regs.wx - 7);           
 }    
 
-void PPU::oam_scan() {
-    std::cout << "STATE: OAM SCAN" << "\n\n";
+void PPU::go_next_scanline() {
+    //go down one line
+    regs.ly = (regs.ly+1) % (screen->height() + VBLANK_LINES);
+    STAT::update_lyc_flag(regs);
+
+    //start from the left
+    scanline_x = 0;
+
+    //reset fetch pipeline
+    bg_fetcher.set_mode(PixelFetcher::Mode::BG_FETCH);
+    bg_fetcher.set_position(scanline_x, regs.ly);
+    bg_fifo.clear();
+
+    //assume background until proven otherwise
+    in_window = false;
+}
+
+void PPU::oam_scan() {  
+    //AKA mode 2
+    //std::cout << "STATE: OAM SCAN\n\n";
+    if(cycles == OAM_SCAN_START) {
+        STAT::set_mode(regs, STAT::MODE_2);
+        //oam.accessible = false;
+        //vram.accessible = true;
+    }
     //TODO oam scan
     if(cycles < OAM_SCAN_END) {
         return;
@@ -41,7 +78,13 @@ void PPU::oam_scan() {
 }
 
 void PPU::pixel_transfer() {
-    std::cout << "STATE: PIXEL TRANSFER" << "\n\n";
+    //AKA mode 3
+    //std::cout << "STATE: PIXEL TRANSFER\n\n";
+    if(cycles == PIXEL_TRANSFER_START) {
+        STAT::set_mode(regs, STAT::MODE_3);
+        //oam.accessible = false;
+        //vram.accessible = false;
+    }
     //check if reached window
     if(window_triggered()) {
         in_window = true;
@@ -78,44 +121,51 @@ void PPU::pixel_transfer() {
 }
 
 void PPU::h_blank() {
-    std::cout << "STATE: H BLANK" << "\n\n";
+    //AKA mode 0
+    //std::cout << "STATE: H BLANK\n\n";
+    if(scanline_x == screen->width()) {
+        //first dot of HBLANK
+        STAT::set_mode(regs, STAT::MODE_0);
+        scanline_x = 0;
+        //oam.accessible = true;
+        //vram.accessible = true;
+    }
     if(cycles < SCANLINE_END) {
         //do nothing until dot number 455
         return;
     }
 
     //prepare to draw next scanline 
-    regs.ly++;
-    scanline_x = 0;
-    bg_fetcher.set_mode(PixelFetcher::Mode::BG_FETCH);
-    bg_fetcher.set_position(scanline_x, regs.ly);
-    bg_fifo.clear();
-
-    in_window = false;
-    
+    go_next_scanline();
     cycles = SCANLINE_START;
     current_state = oam_scan; 
 
     if(regs.ly == screen->height()) {
+        //if next scanline is off-screen
         current_state = v_blank;
     }
 }
 
 void PPU::v_blank() {
-    std::cout << "STATE: V BLANK" << "\n\n";
+    //AKA mode 1
+    //std::cout <<"STATE: VBLANK\n\n";
+    if((cycles == SCANLINE_START+1) && (regs.ly == screen->height())) {
+        //first dot of V BLANK
+        STAT::set_mode(regs, STAT::MODE_1);
+        ic.request(Interrupt::VBLANK);
+        //vram.accessible = true;
+        //oam.accessible = true;
+    }
+
     if(cycles < SCANLINE_END) {
         //do nothing until end of scanline
         return;
     }
-    regs.ly++;
+    go_next_scanline();
     cycles = SCANLINE_START;
 
-    if(regs.ly == screen->height() + VBLANK_LINES) {
-        regs.ly = 0;
-        bg_fetcher.set_mode(PixelFetcher::Mode::BG_FETCH);
-        bg_fetcher.set_position(scanline_x, regs.ly);
-        bg_fifo.clear();
-
+    if(regs.ly == 0) {
+        //looped back to start of screen
         current_state = oam_scan;
     }
 }

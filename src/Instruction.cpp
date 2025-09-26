@@ -774,5 +774,11 @@ Instruction EI() {
     };
 }
 
+Instruction HALT() {
+    return Instruction {
+        [](CPU& cpu) {cpu.halt();}
+    };
+}
+
 
 }   //Operation

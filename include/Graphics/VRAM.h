@@ -16,7 +16,7 @@ class VRAM {
 public:
     VRAM(MMU& mmu);
 
-    bool accessible;    //whether VRAM is externally accessible via MMU
+    bool accessible = true;    //whether VRAM is externally accessible via MMU
     uint8_t read(uint16_t addr) const ;
     void write(uint16_t addr, uint8_t val);
 

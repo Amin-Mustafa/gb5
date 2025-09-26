@@ -7,8 +7,8 @@
 #include "PPURegs.h"
 #include "../../include/Memory/MemoryRegion.h"
 #include "PixelFetcher.h"
-#include "LCD.h"
 #include "FIFO.h"
+#include "../include/EdgeDetector.h"
 
 class MMU;
 class InterruptController;
@@ -27,10 +27,12 @@ private:
     int scanline_x; 
     LCD* screen;
     bool in_window;
+    void go_next_scanline();
     bool window_triggered() const;
     
     unsigned int cycles; //cycles in current scanline (0 - 455) 
     InterruptController& ic;
+    EdgeDetector stat_trigger;
 
     //PPU states
     void oam_scan();
@@ -48,10 +50,7 @@ public:
     using StateFunction = void (PPU::*)();  //pointer to state function
     StateFunction current_state;
     //PPU is clocked in t-states (4 t-state = 1 m-cycle)
-    void tick() {
-        (this->*current_state)();
-        cycles++;
-    }
+    void tick();
 
     void print_state();
 };  
