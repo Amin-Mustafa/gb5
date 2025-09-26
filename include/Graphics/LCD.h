@@ -10,8 +10,8 @@ class LCD {
 private:
     using PixelFormat = uint32_t;
 
-    static constexpr int SCREEN_HEIGHT = 144;
-    static constexpr int SCREEN_WIDTH  = 160;
+    static constexpr unsigned int SCREEN_HEIGHT = 144;
+    static constexpr unsigned int SCREEN_WIDTH  = 160;
 
     enum Color : uint32_t {
         WHITE = 0xFFFFFFFF,

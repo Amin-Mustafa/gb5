@@ -26,6 +26,8 @@ void LCD::init() {
         throw SDL_error("SDL Init error: " + std::string{SDL_GetError()});
     }
 
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+
     //init window
     window = WindowPtr (
         SDL_CreateWindow (
@@ -34,7 +36,7 @@ void LCD::init() {
             SDL_WINDOWPOS_UNDEFINED,
             SCREEN_WIDTH * scale,
             SCREEN_HEIGHT * scale, 
-            SDL_WINDOW_SHOWN
+            SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
         ), 
         SDL_DestroyWindow
     );
@@ -55,8 +57,8 @@ void LCD::init() {
         throw SDL_error("SDL Renderer create error: " + std::string{SDL_GetError()});
     }
 
-    SDL_SetRenderDrawColor(renderer.get(), 255, 255, 255, 255);
-    SDL_RenderClear(renderer.get());	
+    SDL_RenderSetLogicalSize(renderer.get(), SCREEN_WIDTH, SCREEN_HEIGHT);
+    SDL_RenderSetIntegerScale(renderer.get(), SDL_TRUE);
 
     //init texture
     texture = TexturePtr (
@@ -69,6 +71,11 @@ void LCD::init() {
         ),
         SDL_DestroyTexture
     );
+    if(!texture) {
+       throw SDL_error("SDL Texture create error: " + std::string{SDL_GetError()}); 
+    }
+
+    SDL_SetTextureScaleMode(texture.get(), SDL_ScaleModeNearest);
 }
 
 void LCD::draw_frame() {
