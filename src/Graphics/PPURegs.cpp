@@ -1,6 +1,6 @@
 #include "../../include/Graphics/PPURegs.h" 
 #include "../../include/Memory/MMU.h" 
-#include "../../include/Graphics/Spaces.h"
+#include "../../include/Memory/Spaces.h"
 
 
 PPURegs::PPURegs(MMU& mmu) 
@@ -9,7 +9,7 @@ PPURegs::PPURegs(MMU& mmu)
         mmu,
         START, END,
         [this](uint16_t addr) { return read(addr); },
-        [this](uint16_t addr, uint8_t val) { return write(addr, val); }
+        [this, &mmu](uint16_t addr, uint8_t val) { write(mmu, addr, val); }
     }
     {
         //defaults
@@ -45,7 +45,7 @@ uint8_t PPURegs::read(uint16_t addr) const {
         default: return 0xFF;
     }
 }
-void PPURegs::write(uint16_t addr, uint8_t val) {
+void PPURegs::write(MMU& mmu, uint16_t addr, uint8_t val) {
     switch(addr) {
         case Space::LCDC: lcdc  = val;  break;
         case Space::STAT: stat = ((val & ~0x03) | (stat & 0x03)); break;
@@ -53,7 +53,10 @@ void PPURegs::write(uint16_t addr, uint8_t val) {
         case Space::SCX : scx   = val;  break;
         case Space::LY  : break; //read only
         case Space::LYC : lyc   = val;  break;
-        case Space::DMA : dma   = val;  break;
+        case Space::DMA : 
+            dma = val;
+            mmu.start_dma(val);
+            break;
         case Space::BGP : bgp   = val;  break;
         case Space::OBP0: obp_0 = val;  break;
         case Space::OBP1: obp_1 = val;  break;

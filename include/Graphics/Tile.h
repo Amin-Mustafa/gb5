@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <array>
 #include <span>
+#include <format>
+#include <iostream>
 
 class MMU;
 

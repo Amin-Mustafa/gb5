@@ -1,6 +1,6 @@
 #include "../../include/Graphics/PixelFetcher.h"
 #include "../../include/Graphics/VRAM.h"
-#include "../../include/Graphics/Spaces.h"
+#include "../../include/Memory/Spaces.h"
 #include "../../include/Graphics/FIFO.h"
 #include "../../include/Graphics/Tile.h"
 #include "../../include/Graphics/PPURegs.h"

@@ -1,17 +1,24 @@
 #include "../../include/Graphics/VRAM.h"
 #include "../../include/Memory/MMU.h"
-#include "../../include/Graphics/Spaces.h"
+#include "../../include/Memory/Spaces.h"
 #include "../../include/Graphics/Tile.h"
+#include "../../include/Graphics/PPU.h"
+#include <format>
 
-VRAM::VRAM(MMU& mmu)
+VRAM::VRAM(PPU& ppu, MMU& mmu)
     :region {
         mmu,
         START, END,
-        [this](uint16_t addr)->uint8_t { 
-            if(accessible) return read(addr);
-            else return 0xFF;
+        [this, &ppu](uint16_t addr)->uint8_t {
+            if(!accessible) {
+                return 0xFF;
+            }
+            return data[addr - START];
         },
-        [this](uint16_t addr, uint8_t val) { if(accessible) write(addr, val); }
+        [this, &ppu](uint16_t addr, uint8_t val) { 
+            if(!accessible) return;
+            data[addr - START] = val;
+        }
     }
     {}
 

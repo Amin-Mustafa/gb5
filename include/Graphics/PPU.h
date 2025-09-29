@@ -9,6 +9,7 @@
 #include "PixelFetcher.h"
 #include "FIFO.h"
 #include "../include/EdgeDetector.h"
+#include <string>
 
 class MMU;
 class InterruptController;
@@ -20,6 +21,7 @@ private:
     VRAM vram;
     OAM oam;
     PPURegs regs;
+    MMU& mmu;
 
     //drawing facilities
     PixelFetcher bg_fetcher;

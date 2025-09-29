@@ -17,7 +17,7 @@ public:
     uint8_t lcdc, stat, scy, scx, ly, lyc, dma, bgp, obp_0, obp_1, wy, wx;
 
     uint8_t read(uint16_t addr) const;
-    void write(uint16_t addr, uint8_t val);
+    void write(MMU& mmu, uint16_t addr, uint8_t val);
 };  
 
 //LCDC bit checks

@@ -6,17 +6,14 @@
 
 class MMU;
 class Tile;
-
-enum class TileMap : uint16_t {
-    TILEMAP_0 = 0x9800,
-    TILEMAP_1 = 0x9C00
-};
+class PPU;
 
 class VRAM {
 public:
-    VRAM(MMU& mmu);
+    VRAM(PPU& ppu, MMU& mmu);
 
-    bool accessible = true;    //whether VRAM is externally accessible via MMU
+    bool accessible{true};
+
     uint8_t read(uint16_t addr) const ;
     void write(uint16_t addr, uint8_t val);
 

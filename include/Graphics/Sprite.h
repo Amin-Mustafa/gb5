@@ -11,6 +11,8 @@ public:
     Sprite(const uint8_t* bytes) 
         :data{bytes, 4} {}
 
+    enum class Size {SINGLE, DOUBLE};
+
     //information
     uint8_t y() const {return data[0];}
     uint8_t x() const {return data[1];}

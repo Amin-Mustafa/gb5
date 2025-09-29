@@ -25,7 +25,7 @@ private:
     uint32_t color_palette[4] = {
         WHITE, LIGHT_GRAY, DARK_GRAY, BLACK
     };
-
+    
 public:
     LCD(unsigned int window_scale);
 

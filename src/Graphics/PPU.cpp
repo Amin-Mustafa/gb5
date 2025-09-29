@@ -1,7 +1,7 @@
 #include "../../include/Graphics/PPU.h"
 #include "../../include/Memory/MMU.h"
 #include "../../include/Memory/InterruptController.h"
-#include "../../include/Graphics/Spaces.h"
+#include "../../include/Memory/Spaces.h"
 #include "../../include/Graphics/LCD.h"
 #include "../../include/Arithmetic.h"
 #include <iostream>
@@ -19,9 +19,10 @@ constexpr unsigned int VBLANK_LINES = 10;
 uint8_t display_color(uint8_t palette, uint8_t px);
 
 PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
-    :vram{mmu},
+    :vram{*this, mmu},
      oam{mmu},
      regs{mmu}, 
+     mmu{mmu},
      bg_fetcher{vram, regs, bg_fifo},
      ic{interrupt_controller},
      current_state{ oam_scan }
@@ -30,6 +31,14 @@ PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
      }
 
 void PPU::tick() {
+    if(!LCDC::lcd_enable(regs)) {
+        regs.ly = 0;
+        scanline_x = 0;
+        current_state = oam_scan;
+        vram.accessible = true;
+        STAT::set_mode(regs, STAT::Mode::MODE_0);
+        return;
+    }
     (this->*current_state)();
     //check if stat trigger executed
     if(stat_trigger.rising_edge(STAT::stat_line(regs))) {
@@ -67,8 +76,6 @@ void PPU::oam_scan() {
     //std::cout << "STATE: OAM SCAN\n\n";
     if(cycles == OAM_SCAN_START) {
         STAT::set_mode(regs, STAT::MODE_2);
-        //oam.accessible = false;
-        //vram.accessible = true;
     }
     //TODO oam scan
     if(cycles < OAM_SCAN_END) {
@@ -82,8 +89,7 @@ void PPU::pixel_transfer() {
     //std::cout << "STATE: PIXEL TRANSFER\n\n";
     if(cycles == PIXEL_TRANSFER_START) {
         STAT::set_mode(regs, STAT::MODE_3);
-        //oam.accessible = false;
-        //vram.accessible = false;
+        vram.accessible = false;
     }
     //check if reached window
     if(window_triggered()) {
@@ -117,6 +123,7 @@ void PPU::pixel_transfer() {
     if(pos >= screen->width() - 1) {
         //end of line
         current_state = h_blank;
+        vram.accessible = true;
     }
 }
 
@@ -127,8 +134,6 @@ void PPU::h_blank() {
         //first dot of HBLANK
         STAT::set_mode(regs, STAT::MODE_0);
         scanline_x = 0;
-        //oam.accessible = true;
-        //vram.accessible = true;
     }
     if(cycles < SCANLINE_END) {
         //do nothing until dot number 455
@@ -153,8 +158,6 @@ void PPU::v_blank() {
         //first dot of V BLANK
         STAT::set_mode(regs, STAT::MODE_1);
         ic.request(Interrupt::VBLANK);
-        //vram.accessible = true;
-        //oam.accessible = true;
     }
 
     if(cycles < SCANLINE_END) {

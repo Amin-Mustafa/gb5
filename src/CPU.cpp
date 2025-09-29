@@ -9,6 +9,7 @@
 #include "../include/Instruction.h"
 #include "../include/Disassembler.h"
 #include "../include/Memory/InterruptController.h"
+#include "../include/Memory/Spaces.h"
 
 using Arithmetic::pair;
 
@@ -24,7 +25,7 @@ CPU::CPU(MMU& mmu, InterruptController& interrupt_controller):
 
 CPU::~CPU() = default;
 
-uint8_t CPU::read_memory(uint16_t addr) {   
+uint8_t CPU::read_memory(uint16_t addr) { 
         return mmu.read(addr);
     }
 void CPU::write_memory(uint16_t addr, uint8_t val) { 

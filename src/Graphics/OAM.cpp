@@ -6,11 +6,10 @@ OAM::OAM(MMU& mmu)
         mmu,
         START, END,
         [this](uint16_t addr)->uint8_t{
-            if(accessible) return read(addr);
-            else return 0xFF;
+            return read(addr);
         },
         [this](uint16_t addr, uint8_t val) {
-            if(accessible) write(addr, val);
+            write(addr, val);
         }
     }
     {}
