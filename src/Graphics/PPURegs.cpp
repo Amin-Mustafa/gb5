@@ -20,9 +20,9 @@ PPURegs::PPURegs(MMU& mmu)
         ly      = 0x00;
         lyc     = 0x00;
         dma     = 0xFF;
-        bgp     = 0xFC;
-        obp_0   = 0x00;
-        obp_1   = 0x00;
+        bgp     = 0xE4;
+        obp_0   = 0xE4;
+        obp_1   = 0xE4;
         wy      = 0x00;
         wx      = 0x00;
 

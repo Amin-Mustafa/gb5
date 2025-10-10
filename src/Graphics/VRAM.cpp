@@ -20,7 +20,44 @@ VRAM::VRAM(PPU& ppu, MMU& mmu)
             data[addr - START] = val;
         }
     }
-    {}
+    {
+        //test tile
+        write(Space::BLOCK_0 + 0x00, 0xFF);
+        write(Space::BLOCK_0 + 0x01, 0x00);
+        write(Space::BLOCK_0 + 0x02, 0x7E);
+        write(Space::BLOCK_0 + 0x03, 0xFF);
+        write(Space::BLOCK_0 + 0x04, 0x85);
+        write(Space::BLOCK_0 + 0x05, 0x81);
+        write(Space::BLOCK_0 + 0x06, 0x89);
+        write(Space::BLOCK_0 + 0x07, 0x83);
+        write(Space::BLOCK_0 + 0x08, 0x93);
+        write(Space::BLOCK_0 + 0x09, 0x85);
+        write(Space::BLOCK_0 + 0x0A, 0xA5);
+        write(Space::BLOCK_0 + 0x0B, 0x8B);
+        write(Space::BLOCK_0 + 0x0C, 0xC9);
+        write(Space::BLOCK_0 + 0x0D, 0x97);
+        write(Space::BLOCK_0 + 0x0E, 0x7E);
+        write(Space::BLOCK_0 + 0x0F, 0xFF);
+
+        write(Space::BLOCK_0 + 0x10, 0xFF);
+        write(Space::BLOCK_0 + 0x11, 0xFF);
+        write(Space::BLOCK_0 + 0x12, 0xFF);
+        write(Space::BLOCK_0 + 0x13, 0xFF);
+        write(Space::BLOCK_0 + 0x14, 0xFF);
+        write(Space::BLOCK_0 + 0x15, 0xFF);
+        write(Space::BLOCK_0 + 0x16, 0xFF);
+        write(Space::BLOCK_0 + 0x17, 0xFF);
+        write(Space::BLOCK_0 + 0x18, 0xFF);
+        write(Space::BLOCK_0 + 0x19, 0xFF);
+        write(Space::BLOCK_0 + 0x1A, 0xFF);
+        write(Space::BLOCK_0 + 0x1B, 0xFF);
+        write(Space::BLOCK_0 + 0x1C, 0xFF);
+        write(Space::BLOCK_0 + 0x1D, 0xFF);
+        write(Space::BLOCK_0 + 0x1E, 0xFF);
+        write(Space::BLOCK_0 + 0x1F, 0xFF);
+
+        write(Space::TILEMAP_0 + 0x00, 0x00);
+    }
 
 uint8_t VRAM::read(uint16_t addr) const { 
     //PPU-facing; unrestricted VRAM read

@@ -17,7 +17,7 @@ private:
         WHITE = 0xFFFFFFFF,
         LIGHT_GRAY = 0xFFA9A9A9,
         DARK_GRAY = 0xFF545454,
-        BLACK = 0xFF000000
+        BLACK = 0xFF000000,
     };
 
     std::array<PixelFormat, SCREEN_WIDTH * SCREEN_HEIGHT> buffer;

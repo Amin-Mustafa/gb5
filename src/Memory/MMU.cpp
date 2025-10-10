@@ -50,8 +50,7 @@ void MMU::dma_write(uint16_t addr, uint8_t val) {
 }  
 
 void MMU::start_dma(uint8_t page) {
-    //decide whether to start DMA from WRAM or echo RAM
-    uint16_t start_addr = (page <= 0xDF) ? (page << 8) : ((page-0x20) << 8);
+    uint16_t start_addr = (uint16_t)page << 8; 
     //start DMA
     dmac->start(start_addr);
 }

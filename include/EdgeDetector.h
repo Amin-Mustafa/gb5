@@ -15,6 +15,9 @@ public:
         previous = current;
         return rising;
     }
+    void set_state(bool state) {
+        previous = state;
+    }
 };
 
 #endif

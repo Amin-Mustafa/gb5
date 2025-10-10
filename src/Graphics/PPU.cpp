@@ -3,20 +3,27 @@
 #include "../../include/Memory/InterruptController.h"
 #include "../../include/Memory/Spaces.h"
 #include "../../include/Graphics/LCD.h"
+#include "../../include/Graphics/Sprite.h"
 #include "../../include/Arithmetic.h"
 #include <iostream>
 #include <format>
 
-constexpr unsigned int SCANLINE_START = -1; 
-constexpr unsigned int SCANLINE_END = 455;
-constexpr unsigned int OAM_SCAN_START = 0;
-constexpr unsigned int OAM_SCAN_END = 79;
-constexpr unsigned int VBLANK_START = 0;
-constexpr unsigned int VBLANK_END = 4559;
-constexpr unsigned int PIXEL_TRANSFER_START = 80;
-constexpr unsigned int VBLANK_LINES = 10;
+constexpr int SCANLINE_START = -1; 
+constexpr int SCANLINE_END = 455;
+constexpr int OAM_SCAN_START = 0;
+constexpr int OAM_SCAN_END = 79;
+constexpr int VBLANK_START = 0;
+constexpr int VBLANK_END = 4559;
+constexpr int PIXEL_TRANSFER_START = 80;
+constexpr int VBLANK_LINES = 10;
+constexpr int SPRITE_BYTES = 4;
+constexpr int BASE_SPR_HEIGHT = 8;
+constexpr int SCREEN_Y_OFFSET = 16;
+constexpr int SCREEN_X_OFFSET = 8;
 
 uint8_t display_color(uint8_t palette, uint8_t px);
+uint8_t mix_pixel(uint8_t bg_px, SpritePixel spr_px, const PPURegs& regs);
+std::string ppu_state_to_str(PPU::State state);
 
 PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
     :vram{*this, mmu},
@@ -24,22 +31,30 @@ PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
      regs{mmu}, 
      mmu{mmu},
      bg_fetcher{vram, regs, bg_fifo},
+     spr_fetcher{vram, regs, spr_fifo},
      ic{interrupt_controller},
-     current_state{ oam_scan }
+     current_state{ oam_scan },
+     curr_state_enum{State::OAM_SCAN}
      {
         bg_fetcher.set_position(scanline_x, regs.ly);
      }
 
 void PPU::tick() {
+    //do not tick if PPU switched off
     if(!LCDC::lcd_enable(regs)) {
         regs.ly = 0;
         scanline_x = 0;
         current_state = oam_scan;
+        curr_state_enum = State::OAM_SCAN;
         vram.accessible = true;
+        oam.accessible = true;
         STAT::set_mode(regs, STAT::Mode::MODE_0);
         return;
     }
+
+    //execute current state function
     (this->*current_state)();
+
     //check if stat trigger executed
     if(stat_trigger.rising_edge(STAT::stat_line(regs))) {
         ic.request(Interrupt::LCD);
@@ -54,6 +69,15 @@ bool PPU::window_triggered() const {
             (scanline_x >= regs.wx - 7);           
 }    
 
+uint8_t PPU::sprite_triggered() const {
+    for(int i = 0; i < spr_buf.count(); ++i) {
+        if((int)scanline_x == (int)spr_buf.at(i).x() - 2*SCREEN_X_OFFSET) {
+            return i;
+        }
+    }
+    return spr_buf.count();
+}
+
 void PPU::go_next_scanline() {
     //go down one line
     regs.ly = (regs.ly+1) % (screen->height() + VBLANK_LINES);
@@ -67,26 +91,57 @@ void PPU::go_next_scanline() {
     bg_fetcher.set_position(scanline_x, regs.ly);
     bg_fifo.clear();
 
+    spr_buf.clear();
+    spr_fifo.clear();
+
     //assume background until proven otherwise
     in_window = false;
+
+    cycles = 0;
 }
 
 void PPU::oam_scan() {  
     //AKA mode 2
-    //std::cout << "STATE: OAM SCAN\n\n";
+    //std::cout << "STATE: OAM SCAN\n";
     if(cycles == OAM_SCAN_START) {
         STAT::set_mode(regs, STAT::MODE_2);
+        oam.accessible = false;
+        oam_counter = 0;
+        cycles = 0;
     }
-    //TODO oam scan
-    if(cycles < OAM_SCAN_END) {
-        return;
+    if((cycles % 2) == 0) {
+        //every 2 dots
+        if(spr_buf.count() < 10) {
+            //current sprite
+            Sprite spr = oam.sprite_at(Space::OAM_START + oam_counter*SPRITE_BYTES);
+
+            //sprite height mode at current dot
+            uint8_t spr_height = BASE_SPR_HEIGHT + BASE_SPR_HEIGHT*LCDC::obj_size(regs);
+
+            //position of scanline wrt to sprite
+            int pos = regs.ly - (spr.y() - SCREEN_Y_OFFSET);
+            
+            if(pos >= 0 && pos < spr_height) {
+                std::cout << "OAM counter = " << (int)oam_counter << "\t";
+                std::cout << "Sprite found at " << (int)regs.ly << "\t";
+                std::cout << std::format(
+                    "X:{:d}, Y{:d}, Index:{:02x}\n",
+                    spr.x(), spr.y(), spr.index()
+                );
+                spr_buf.push_sprite(spr);
+            }
+        }
+        oam_counter++;
     }
-    current_state = pixel_transfer;
+    if(cycles == PIXEL_TRANSFER_START - 1) {
+        current_state = pixel_transfer;
+        curr_state_enum = State::PIXEL_TRANSFER;
+    }
 }
 
 void PPU::pixel_transfer() {
     //AKA mode 3
-    //std::cout << "STATE: PIXEL TRANSFER\n\n";
+    //std::cout << "STATE: PIXEL TRANSFER\n";
     if(cycles == PIXEL_TRANSFER_START) {
         STAT::set_mode(regs, STAT::MODE_3);
         vram.accessible = false;
@@ -98,38 +153,61 @@ void PPU::pixel_transfer() {
         //transform coordinates into window space
         bg_fetcher.set_position(scanline_x, regs.ly);
     }
-
-    bg_fetcher.tick();
-
-    // if no pixels ready -> nothing to do
-    if(bg_fifo.empty()) {
-        return; 
-    } 
     
-    // otherwise start drawing
-    // take a pixel from the FIFO
-    uint8_t px = bg_fifo.pop();
+    //check if reached sprite
+    uint8_t index = sprite_triggered();
+    if(index != spr_buf.count()) {
+        bg_fetcher.request_stop();  //stop after completing current step
+        spr_fetcher.set_sprite(spr_buf.at(index));
+    }
+    
+    if(!spr_fetcher.active()) {
+        bg_fetcher.tick();
+        if(!bg_fetcher.active()) {
+            //bg fetcher done using VRAM bus, 
+            //switch to spr fetcher
+            spr_fetcher.start();
+        }
+    } else {
+        spr_fetcher.tick();
+        if(!spr_fetcher.active()) {
+            //spr fetcher done with VRAM bus
+            bg_fetcher.start();
+        }
+    }
+
+    if(bg_fifo.empty()) {
+        return;
+    }
 
     int pos = scanline_x - regs.scx % 8;
+    uint8_t bg_px = bg_fifo.pop();
+    SpritePixel spr_px;
+    if(!spr_fifo.empty() && (scanline_x == spr_fifo.front().x())) {
+        spr_px = spr_fifo.pop();
+    }
+    uint8_t display_px = mix_pixel(bg_px, spr_px, regs);
+
     scanline_x++;
 
     // pos < 0 means there are pixels in the FIFO "behind" the screen
     if(pos >= 0 && screen != nullptr) {
         //reached left edge of screen
-        uint8_t display_px = display_color(regs.bgp, px);
         screen->blit(display_px, pos, regs.ly);
     }
     
     if(pos >= screen->width() - 1) {
         //end of line
         current_state = h_blank;
+        curr_state_enum = State::H_BLANK;
         vram.accessible = true;
+        oam.accessible = true;
     }
 }
 
 void PPU::h_blank() {
     //AKA mode 0
-    //std::cout << "STATE: H BLANK\n\n";
+    //std::cout << "STATE: H BLANK\n";
     if(scanline_x == screen->width()) {
         //first dot of HBLANK
         STAT::set_mode(regs, STAT::MODE_0);
@@ -143,17 +221,19 @@ void PPU::h_blank() {
     //prepare to draw next scanline 
     go_next_scanline();
     cycles = SCANLINE_START;
-    current_state = oam_scan; 
+    current_state = oam_scan;
+    curr_state_enum = State::OAM_SCAN; 
 
     if(regs.ly == screen->height()) {
         //if next scanline is off-screen
         current_state = v_blank;
+        curr_state_enum = State::V_BLANK;
     }
 }
 
 void PPU::v_blank() {
     //AKA mode 1
-    //std::cout <<"STATE: VBLANK\n\n";
+    //std::cout <<"STATE: VBLANK\n";
     if((cycles == SCANLINE_START+1) && (regs.ly == screen->height())) {
         //first dot of V BLANK
         STAT::set_mode(regs, STAT::MODE_1);
@@ -170,11 +250,13 @@ void PPU::v_blank() {
     if(regs.ly == 0) {
         //looped back to start of screen
         current_state = oam_scan;
+        curr_state_enum = State::OAM_SCAN;
     }
 }
 
 void PPU::print_state() {
     std::cout << "cycle:" << cycles << std::endl;
+    std::cout << "STATE: " << ppu_state_to_str(curr_state_enum) << std::endl;
     std::cout << "X:" << (int)(scanline_x - regs.scx % 8) << ' '; 
     std::cout << std::format("LCDC:{:02x} ", regs.lcdc);
     std::cout << std::format("STAT:{:02x} ", regs.stat);
@@ -192,11 +274,58 @@ void PPU::print_state() {
 
     std::cout << "BG Fetcher: " << '\n';
     bg_fetcher.print_state();
-    std::cout << "Pixel FIFO: ";
-    bg_fifo.print();
+    std::cout << "SPR Fetcher: " << '\n';
+    spr_fetcher.print_state();
+    std::cout << "SPR BUFFER: " 
+              << "Count: " << (int)spr_buf.count()
+              << " Head: ";
+    if(spr_buf.count()) {
+    std::cout << "X:" << (int)spr_buf.at(0).x()
+              << ", Y:" << (int)spr_buf.at(0).y()
+              << ", Index:" << (int)spr_buf.at(0).index();
+    } else {
+        std::cout << "NULL";
+    }
+    std::cout << std::endl;
 }
 
 uint8_t display_color(uint8_t palette, uint8_t px) {
     if(px > 0x03) return 0;
     return (palette >> (2*px)) & (uint8_t)3;
+}
+
+uint8_t mix_pixel(uint8_t bg_px, SpritePixel spr_px, const PPURegs& regs) {
+    Sprite::Priority prio = spr_px.priority();
+    Sprite::Palette pal = spr_px.palette();
+    uint8_t color = 0;
+
+    if(!spr_px.color()) {
+        color = display_color(regs.bgp, bg_px);
+    } else if(prio == Sprite::Priority::BACK && bg_px) {
+        color = display_color(regs.bgp, bg_px);
+    } else {
+        switch(pal) {
+            case Sprite::Palette::OBP0:
+                color = display_color(regs.obp_0, spr_px.color());
+                break;
+            case Sprite::Palette::OBP1:
+                color = display_color(regs.obp_1, spr_px.color());
+                break;
+        }
+    }
+
+    return color;
+}
+
+std::string ppu_state_to_str(PPU::State state) {
+    switch(state) {
+        case PPU::State::OAM_SCAN:
+            return "OAM SCAN";
+        case PPU::State::PIXEL_TRANSFER:
+            return "PIXEL TRANSFER";
+        case PPU::State::H_BLANK:
+            return "H BLANK";
+        case PPU::State::V_BLANK:
+            return "V BLANK";
+    }
 }

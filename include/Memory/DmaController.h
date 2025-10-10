@@ -8,7 +8,7 @@ constexpr unsigned int DMA_CYCLES = 160;
 
 class DmaController {
 private:
-    uint8_t cycles; 
+    uint16_t cycles; 
     bool on;
     uint16_t start_addr;
 public:
@@ -29,11 +29,11 @@ public:
     bool active() const {
         return on;
     }
-    uint8_t offset() const {
+    uint16_t offset() const {
         //offset from DMA start address
         return cycles;
     }
-    uint8_t start_address() const {
+    uint16_t start_address() const {
         return start_addr;
     }
 };
