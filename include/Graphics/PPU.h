@@ -28,8 +28,8 @@ private:
     PixelFetcher bg_fetcher;
     SpriteFetcher spr_fetcher;
     SpriteBuffer spr_buf;
-    PixelFifo bg_fifo;
-    RingBuffer<SpritePixel, 16> spr_fifo;
+    BgFifo bg_fifo;
+    SprFifo spr_fifo;
     uint8_t scanline_x; 
     uint8_t oam_counter;
     LCD* screen;

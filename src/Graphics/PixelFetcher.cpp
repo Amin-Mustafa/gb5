@@ -17,7 +17,7 @@ constexpr int PUSH_START = 12;
 
 std::string fetcher_state_to_str(PixelFetcher::State);
 
-PixelFetcher::PixelFetcher(const VRAM& vram, const PPURegs& control, PixelFifo& fifo) 
+PixelFetcher::PixelFetcher(const VRAM& vram, const PPURegs& control, BgFifo& fifo) 
     : on{true},
       vram{vram}, regs{control}, fifo{fifo},
       curr_state{ init },

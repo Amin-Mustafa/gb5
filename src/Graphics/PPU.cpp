@@ -71,7 +71,13 @@ bool PPU::window_triggered() const {
 
 uint8_t PPU::sprite_triggered() const {
     for(int i = 0; i < spr_buf.count(); ++i) {
-        if((int)scanline_x == (int)spr_buf.at(i).x() - 2*SCREEN_X_OFFSET) {
+        if( scanline_x == spr_buf.at(i).x() - 2*SCREEN_X_OFFSET ) {
+            std::cout << std::format(
+                "Sprite triggered: X:{}, Y:{}, Index:{:02x}\n",
+                (int)spr_buf.at(i).x(),
+                (int)spr_buf.at(i).y(),
+                (int)spr_buf.at(i).index()
+            );
             return i;
         }
     }
@@ -158,7 +164,7 @@ void PPU::pixel_transfer() {
     uint8_t index = sprite_triggered();
     if(index != spr_buf.count()) {
         bg_fetcher.request_stop();  //stop after completing current step
-        spr_fetcher.set_sprite(spr_buf.at(index));
+        spr_fetcher.queue_sprite(spr_buf.at(index));
     }
     
     if(!spr_fetcher.active()) {
@@ -171,6 +177,7 @@ void PPU::pixel_transfer() {
     } else {
         spr_fetcher.tick();
         if(!spr_fetcher.active()) {
+            std::cout << "SPR FETCH DONE\n";
             //spr fetcher done with VRAM bus
             bg_fetcher.start();
         }
@@ -183,7 +190,7 @@ void PPU::pixel_transfer() {
     int pos = scanline_x - regs.scx % 8;
     uint8_t bg_px = bg_fifo.pop();
     SpritePixel spr_px;
-    if(!spr_fifo.empty() && (scanline_x == spr_fifo.front().x())) {
+    if(!spr_fifo.empty() && (scanline_x == spr_fifo.front().x - SCREEN_X_OFFSET)) {
         spr_px = spr_fifo.pop();
     }
     uint8_t display_px = mix_pixel(bg_px, spr_px, regs);
@@ -274,6 +281,8 @@ void PPU::print_state() {
 
     std::cout << "BG Fetcher: " << '\n';
     bg_fetcher.print_state();
+    std::cout << "BG FIFO: ";
+    bg_fifo.print();
     std::cout << "SPR Fetcher: " << '\n';
     spr_fetcher.print_state();
     std::cout << "SPR BUFFER: " 
@@ -295,21 +304,21 @@ uint8_t display_color(uint8_t palette, uint8_t px) {
 }
 
 uint8_t mix_pixel(uint8_t bg_px, SpritePixel spr_px, const PPURegs& regs) {
-    Sprite::Priority prio = spr_px.priority();
-    Sprite::Palette pal = spr_px.palette();
+    Sprite::Priority prio = spr_px.priority;
+    Sprite::Palette pal = spr_px.palette;
     uint8_t color = 0;
 
-    if(!spr_px.color()) {
+    if(!spr_px.color) {
         color = display_color(regs.bgp, bg_px);
     } else if(prio == Sprite::Priority::BACK && bg_px) {
         color = display_color(regs.bgp, bg_px);
     } else {
         switch(pal) {
             case Sprite::Palette::OBP0:
-                color = display_color(regs.obp_0, spr_px.color());
+                color = display_color(regs.obp_0, spr_px.color);
                 break;
             case Sprite::Palette::OBP1:
-                color = display_color(regs.obp_1, spr_px.color());
+                color = display_color(regs.obp_1, spr_px.color);
                 break;
         }
     }

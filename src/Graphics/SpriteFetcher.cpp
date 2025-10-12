@@ -14,6 +14,7 @@ constexpr int BASE_SPR_HEIGHT = 8;
 
 std::string sprite_info(const Sprite& spr);
 std::string spr_fetcher_state_to_str(int cycles);
+bool px_occupied(SprFifo& fifo, SpritePixel candidate);
 
 void SpriteFetcher::start() {
     on = true;
@@ -25,11 +26,19 @@ void SpriteFetcher::start() {
 }
 
 void SpriteFetcher::stop() {
-    //curr_spr = nullptr;
+    //spr_queue.front() = nullptr;
     cycles = GET_ID_START;
     curr_state = get_tile_index;
 
     on = false;
+}
+
+void SpriteFetcher::reset_fetch() {
+    cycles = GET_ID_START - 1;
+    curr_state = get_tile_index;
+    std::fill(px_buf.begin(), px_buf.end(), 0);
+    
+    on = true;
 }
 
 void SpriteFetcher::tick()  {
@@ -40,7 +49,7 @@ void SpriteFetcher::tick()  {
     cycles++;
 }
 void SpriteFetcher::get_tile_index() {
-    tile_index = curr_spr->index();
+    tile_index = spr_queue.front()->index();
 
     curr_state = get_row;
 }
@@ -52,8 +61,8 @@ void SpriteFetcher::get_row() {
         uint8_t spr_height = BASE_SPR_HEIGHT + BASE_SPR_HEIGHT*(uint8_t)obj_size(regs);
         
         //the tile row is fixed here 
-        row = regs.ly - curr_spr->y() + SCREEN_Y_OFFSET;
-        if(curr_spr->y_flip()) {
+        row = regs.ly - spr_queue.front()->y() + SCREEN_Y_OFFSET;
+        if(spr_queue.front()->y_flip()) {
             row = (spr_height-1) - row;  
         }
 
@@ -80,14 +89,25 @@ void SpriteFetcher::get_tile_line() {
 }
 
 void SpriteFetcher::push_to_fifo() {
-    for(uint8_t px = 0; px < px_buf.size(); ++px) {
-        SpritePixel spr_px {
-            px_buf[px], (uint8_t)(curr_spr->x() + px), curr_spr->palette(), curr_spr->priority()
-        };
-        fifo.push(spr_px);
-    }
+    SpritePixel spr_px;
 
-    stop();
+    for(uint8_t px = 0; px < px_buf.size(); ++px) {
+        spr_px.color = px_buf[px];
+        spr_px.x = spr_queue.front()->x() + px;
+        spr_px.palette = spr_queue.front()->palette();
+        spr_px.priority = spr_queue.front()->priority();
+        
+        if(!px_occupied(fifo, spr_px)) {
+            fifo.push(spr_px);
+        }
+    }
+    spr_queue.pop();
+    std::cout << "pixels remaining = " << (int)spr_queue.count() << '\n';
+    if(spr_queue.empty()) {
+        stop();
+    } else {
+        reset_fetch();
+    }
 }
 
 void SpriteFetcher::print_state() {
@@ -109,10 +129,10 @@ void SpriteFetcher::print_state() {
     
     //print current sprite head
     std::cout << "Current Sprite: ";
-    if(!curr_spr) {
+    if(!spr_queue.front()) {
         std::cout << "NULL";
     } else {
-        std::cout << sprite_info(*curr_spr);
+        std::cout << sprite_info(*spr_queue.front());
     }
     std::cout << std::endl;
 }
@@ -136,4 +156,18 @@ std::string spr_fetcher_state_to_str(int cycles) {
     } else { 
         return "PUSH";
     }
+}
+
+bool px_occupied(SprFifo& fifo, SpritePixel candidate) {
+    bool occupied = false;
+    for(SpritePixel& px : fifo) {
+        if(px.x == candidate.x) {
+            occupied = true;
+            //position is occupied
+            if(!px.color) {
+                px = candidate; //replace if existing px transparent
+            }
+        }
+    }
+    return occupied;
 }

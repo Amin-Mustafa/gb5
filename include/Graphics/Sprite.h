@@ -9,7 +9,7 @@ class Sprite {
 private:
     std::span<const uint8_t, 4> data;
     static constexpr uint8_t init[4] = {0};
-public:
+public:    
     Sprite()
         :data{init, 4} {}
     Sprite(const uint8_t* bytes) 
@@ -60,34 +60,11 @@ public:
 }; 
 
 class SpritePixel {
-private:
-    uint8_t col;
-    uint8_t x_pos;
-    uint8_t pal;
-    uint8_t prio;
 public:
-    SpritePixel()
-        :col{0}, x_pos{0}, pal{0}, prio{0} {}
-
-    SpritePixel(uint8_t color, uint8_t x, Sprite::Palette palette, Sprite::Priority priority)
-        :col{color},
-         x_pos{x},
-         pal{static_cast<uint8_t>(palette)}, 
-         prio{static_cast<uint8_t>(priority)} {}
-
-    uint8_t color() const {
-        return col;
-    }
-    //get visible x position
-    uint8_t x() const {
-        return x_pos - 8;
-    }
-    Sprite::Palette palette() const {
-        return static_cast<Sprite::Palette>(pal);
-    }
-    Sprite::Priority priority() const {
-        return static_cast<Sprite::Priority>(prio);
-    }
+    uint8_t color = 0;
+    uint8_t x = 0;
+    Sprite::Palette palette = Sprite::Palette::OBP0;
+    Sprite::Priority priority = Sprite::Priority::BACK;
 };
 
 #endif

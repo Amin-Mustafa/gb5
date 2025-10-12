@@ -7,6 +7,8 @@
 #include "RingBuffer.h"
 #include "Sprite.h"
 #include "Tile.h"
+#include <iostream>
+#include <format>
 
 class VRAM;
 class PPURegs;
@@ -14,12 +16,12 @@ class PPURegs;
 class SpriteFetcher {
 private:
     std::array<uint8_t, 8> px_buf;
-    const Sprite* curr_spr = nullptr;
+    RingBuffer<const Sprite*, 8> spr_queue;
 
     //storage access
     const VRAM& vram;      
     const PPURegs& regs; 
-    RingBuffer<SpritePixel, 16>& fifo;
+    SprFifo& fifo;
 
     uint8_t row;
     uint8_t tile_index;
@@ -28,7 +30,7 @@ private:
     bool on = false;    //the spr fifo only works periodically
     int cycles;
 public: 
-    SpriteFetcher(const VRAM& vram, const PPURegs& control, RingBuffer<SpritePixel, 16>& sprite_fifo)
+    SpriteFetcher(const VRAM& vram, const PPURegs& control, SprFifo& sprite_fifo)
         : vram{vram},
           regs{control},
           fifo{sprite_fifo},
@@ -39,13 +41,20 @@ public:
     bool active() const {
         return on;
     }
-    void set_sprite(const Sprite& spr) {
-        curr_spr = &spr;
+    void queue_sprite(const Sprite& spr) {
+        std::cout << std::format(
+            "Sprite QUEUED: X:{}, Y:{}, Index{:02x}\n",
+            (int)spr.x(),
+            (int)spr.y(),
+            (int)spr.index()
+        );
+        spr_queue.push(&spr);
     }
 
     //control
     void start();
     void stop();
+    void reset_fetch();
     void tick();
 
     //state functions

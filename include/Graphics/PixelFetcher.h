@@ -28,10 +28,10 @@ private:
     //storage access
     const VRAM& vram;      
     const PPURegs& regs; 
-    PixelFifo& fifo;
+    BgFifo& fifo;
 
 public:
-    PixelFetcher(const VRAM& vram, const PPURegs& control, PixelFifo& fifo);
+    PixelFetcher(const VRAM& vram, const PPURegs& control, BgFifo& fifo);
     using StateFunction = void(PixelFetcher::*)();
     //behavior
     enum class Mode {BG_FETCH, WIN_FETCH};
