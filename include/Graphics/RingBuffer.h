@@ -53,7 +53,6 @@ public:
     bool full() const { return num_elements == data.size();}
 
     void clear() {
-        std::fill(data.begin(), data.end(), T());
         head = 0;
         tail = data.size() - 1;
         num_elements = 0;

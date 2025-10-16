@@ -56,6 +56,7 @@ public:
     void stop();
     void reset_fetch();
     void tick();
+    void clear_queue() { spr_queue.clear(); }
 
     //state functions
     using StateFunction = void(SpriteFetcher::*)();

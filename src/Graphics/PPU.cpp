@@ -8,18 +8,22 @@
 #include <iostream>
 #include <format>
 
-constexpr int SCANLINE_START = -1; 
-constexpr int SCANLINE_END = 455;
-constexpr int OAM_SCAN_START = 0;
-constexpr int OAM_SCAN_END = 79;
-constexpr int VBLANK_START = 0;
-constexpr int VBLANK_END = 4559;
-constexpr int PIXEL_TRANSFER_START = 80;
-constexpr int VBLANK_LINES = 10;
+enum StateDots {
+    SCANLINE_START = 0, 
+    SCANLINE_END = 455,
+    OAM_SCAN_START = 0,
+    OAM_SCAN_END = 79,
+    VBLANK_START = 0,
+    VBLANK_END = 4559,
+    PIXEL_TRANSFER_START = 80,
+};
+enum Position {
+    VBLANK_LINES = 10,
+    BASE_SPR_HEIGHT = 8,
+    SCREEN_Y_OFFSET = 16,
+    SCREEN_X_OFFSET = 8,
+};
 constexpr int SPRITE_BYTES = 4;
-constexpr int BASE_SPR_HEIGHT = 8;
-constexpr int SCREEN_Y_OFFSET = 16;
-constexpr int SCREEN_X_OFFSET = 8;
 
 uint8_t display_color(uint8_t palette, uint8_t px);
 uint8_t mix_pixel(uint8_t bg_px, SpritePixel spr_px, const PPURegs& regs);
@@ -84,11 +88,12 @@ uint8_t PPU::sprite_triggered() const {
     return spr_buf.count();
 }
 
-void PPU::go_next_scanline() {
-    //go down one line
+void PPU::go_next_scanline(){
     regs.ly = (regs.ly+1) % (screen->height() + VBLANK_LINES);
     STAT::update_lyc_flag(regs);
+}
 
+void PPU::prep_scanline() {
     //start from the left
     scanline_x = 0;
 
@@ -96,62 +101,30 @@ void PPU::go_next_scanline() {
     bg_fetcher.set_mode(PixelFetcher::Mode::BG_FETCH);
     bg_fetcher.set_position(scanline_x, regs.ly);
     bg_fifo.clear();
-
-    spr_buf.clear();
     spr_fifo.clear();
+    spr_fetcher.clear_queue();
 
-    //assume background until proven otherwise
-    in_window = false;
-
-    cycles = 0;
-}
-
-void PPU::oam_scan() {  
-    //AKA mode 2
-    //std::cout << "STATE: OAM SCAN\n";
-    if(cycles == OAM_SCAN_START) {
-        STAT::set_mode(regs, STAT::MODE_2);
-        oam.accessible = false;
-        oam_counter = 0;
-        cycles = 0;
+    //check win/spr triggers
+    if(window_triggered()) {
+        in_window = true;
+        bg_fetcher.set_mode(PixelFetcher::Mode::WIN_FETCH);
+        //transform coordinates into window space
+        bg_fetcher.set_position(scanline_x, regs.ly);
     }
-    if((cycles % 2) == 0) {
-        //every 2 dots
-        if(spr_buf.count() < 10) {
-            //current sprite
-            Sprite spr = oam.sprite_at(Space::OAM_START + oam_counter*SPRITE_BYTES);
-
-            //sprite height mode at current dot
-            uint8_t spr_height = BASE_SPR_HEIGHT + BASE_SPR_HEIGHT*LCDC::obj_size(regs);
-
-            //position of scanline wrt to sprite
-            int pos = regs.ly - (spr.y() - SCREEN_Y_OFFSET);
-            
-            if(pos >= 0 && pos < spr_height) {
-                std::cout << "OAM counter = " << (int)oam_counter << "\t";
-                std::cout << "Sprite found at " << (int)regs.ly << "\t";
-                std::cout << std::format(
-                    "X:{:d}, Y{:d}, Index:{:02x}\n",
-                    spr.x(), spr.y(), spr.index()
-                );
-                spr_buf.push_sprite(spr);
-            }
+    //check visible sprites "behind" the screen
+    for(int i = 0; i < spr_buf.count(); ++i) {
+        const Sprite& spr = spr_buf.at(i);
+        if(spr.x() > 0 && spr.x() <= 2*SCREEN_X_OFFSET) {
+            bg_fetcher.request_stop();
+            spr_fetcher.queue_sprite(spr);
         }
-        oam_counter++;
-    }
-    if(cycles == PIXEL_TRANSFER_START - 1) {
-        current_state = pixel_transfer;
-        curr_state_enum = State::PIXEL_TRANSFER;
     }
 }
 
-void PPU::pixel_transfer() {
-    //AKA mode 3
-    //std::cout << "STATE: PIXEL TRANSFER\n";
-    if(cycles == PIXEL_TRANSFER_START) {
-        STAT::set_mode(regs, STAT::MODE_3);
-        vram.accessible = false;
-    }
+void PPU::advance_scanline() {
+    //increment scanline x and check win/spr triggers
+    scanline_x++;
+
     //check if reached window
     if(window_triggered()) {
         in_window = true;
@@ -166,6 +139,53 @@ void PPU::pixel_transfer() {
         bg_fetcher.request_stop();  //stop after completing current step
         spr_fetcher.queue_sprite(spr_buf.at(index));
     }
+}
+
+void PPU::oam_scan() {  
+    //AKA mode 2
+    //std::cout << "STATE: OAM SCAN\n";
+    if(cycles == OAM_SCAN_START) {
+        STAT::set_mode(regs, STAT::MODE_2);
+        oam.accessible = false;
+        spr_buf.clear();   //prepare sprite
+    }
+    if((cycles % 2) == 0) {
+        //every 2 dots
+        if(spr_buf.count() < 10) {
+            //current sprite
+            Sprite spr = oam.sprite_at(Space::OAM_START + (cycles/2)*SPRITE_BYTES);
+
+            //sprite height mode at current dot
+            uint8_t spr_height = BASE_SPR_HEIGHT + BASE_SPR_HEIGHT*LCDC::obj_size(regs);
+
+            //position of scanline wrt to sprite
+            int pos = regs.ly - (spr.y() - SCREEN_Y_OFFSET);
+            
+            if(pos >= 0 && pos < spr_height) {
+                std::cout << "OAM counter = " << (int)(cycles/2) << "\t";
+                std::cout << "Sprite found at " << (int)regs.ly << "\t";
+                std::cout << std::format(
+                    "X:{:d}, Y{:d}, Index:{:02x}\n",
+                    spr.x(), spr.y(), spr.index()
+                );
+                spr_buf.push_sprite(spr);
+            }
+        }
+    }
+    if(cycles == OAM_SCAN_END) {
+        current_state = pixel_transfer;
+        curr_state_enum = State::PIXEL_TRANSFER;
+        prep_scanline();
+    }
+}
+
+void PPU::pixel_transfer() {
+    //AKA mode 3
+    //std::cout << "STATE: PIXEL TRANSFER\n";
+    if(cycles == PIXEL_TRANSFER_START) {
+        STAT::set_mode(regs, STAT::MODE_3);
+        vram.accessible = false;
+    }
     
     if(!spr_fetcher.active()) {
         bg_fetcher.tick();
@@ -177,7 +197,6 @@ void PPU::pixel_transfer() {
     } else {
         spr_fetcher.tick();
         if(!spr_fetcher.active()) {
-            std::cout << "SPR FETCH DONE\n";
             //spr fetcher done with VRAM bus
             bg_fetcher.start();
         }
@@ -195,15 +214,15 @@ void PPU::pixel_transfer() {
     }
     uint8_t display_px = mix_pixel(bg_px, spr_px, regs);
 
-    scanline_x++;
-
     // pos < 0 means there are pixels in the FIFO "behind" the screen
     if(pos >= 0 && screen != nullptr) {
         //reached left edge of screen
         screen->blit(display_px, pos, regs.ly);
     }
     
-    if(pos >= screen->width() - 1) {
+    advance_scanline();
+
+    if(scanline_x >= screen->width()) {
         //end of line
         current_state = h_blank;
         curr_state_enum = State::H_BLANK;
@@ -218,21 +237,21 @@ void PPU::h_blank() {
     if(scanline_x == screen->width()) {
         //first dot of HBLANK
         STAT::set_mode(regs, STAT::MODE_0);
-        scanline_x = 0;
     }
     if(cycles < SCANLINE_END) {
         //do nothing until dot number 455
         return;
     }
 
-    //prepare to draw next scanline 
+    //start next oam scan
     go_next_scanline();
-    cycles = SCANLINE_START;
+    cycles = OAM_SCAN_START - 1;
     current_state = oam_scan;
     curr_state_enum = State::OAM_SCAN; 
 
     if(regs.ly == screen->height()) {
         //if next scanline is off-screen
+        cycles = VBLANK_START - 1;
         current_state = v_blank;
         curr_state_enum = State::V_BLANK;
     }
@@ -241,21 +260,21 @@ void PPU::h_blank() {
 void PPU::v_blank() {
     //AKA mode 1
     //std::cout <<"STATE: VBLANK\n";
-    if((cycles == SCANLINE_START+1) && (regs.ly == screen->height())) {
+    if(cycles == VBLANK_START) {
         //first dot of V BLANK
         STAT::set_mode(regs, STAT::MODE_1);
         ic.request(Interrupt::VBLANK);
     }
 
-    if(cycles < SCANLINE_END) {
+    if(cycles % SCANLINE_END) {
         //do nothing until end of scanline
         return;
     }
     go_next_scanline();
-    cycles = SCANLINE_START;
 
     if(regs.ly == 0) {
         //looped back to start of screen
+        cycles = OAM_SCAN_START - 1;
         current_state = oam_scan;
         curr_state_enum = State::OAM_SCAN;
     }

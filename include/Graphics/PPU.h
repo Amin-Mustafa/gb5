@@ -30,16 +30,18 @@ private:
     SpriteBuffer spr_buf;
     BgFifo bg_fifo;
     SprFifo spr_fifo;
-    uint8_t scanline_x; 
-    uint8_t oam_counter;
+    uint8_t scanline_x;     //position on screen (0-159)
     LCD* screen;
     bool in_window;
     bool window_triggered() const;
     uint8_t sprite_triggered() const;
 
+    //scanline
     void go_next_scanline();
-    
-    unsigned int cycles; //cycles in current scanline (0 - 455) 
+    void prep_scanline();
+    void advance_scanline();
+
+    int cycles;
     InterruptController& ic;
     EdgeDetector stat_trigger;
 

@@ -21,7 +21,7 @@ OAM::OAM(MMU& mmu)
         write(START + 0x02, 1); 
 
         write(START + 0x10, 16);
-        write(START + 0x11, 26);
+        write(START + 0x11, 24);
         write(START + 0x12, 1);
 
         write(START + 0x20, 16);

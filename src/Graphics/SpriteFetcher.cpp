@@ -102,7 +102,6 @@ void SpriteFetcher::push_to_fifo() {
         }
     }
     spr_queue.pop();
-    std::cout << "pixels remaining = " << (int)spr_queue.count() << '\n';
     if(spr_queue.empty()) {
         stop();
     } else {

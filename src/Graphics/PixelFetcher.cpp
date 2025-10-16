@@ -38,6 +38,7 @@ void PixelFetcher::init() {
     curr_state = get_tile_index;
     curr_state_enum = State::GET_ID;
 
+    //wait for init to finish before checking stop
     if(stop_pending) {
         on = false;
     }
