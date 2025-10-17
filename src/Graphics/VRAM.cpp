@@ -21,7 +21,7 @@ VRAM::VRAM(PPU& ppu, MMU& mmu)
         }
     }
     {
-        //test tile
+/*         //test tile
         write(Space::BLOCK_0 + 0x00, 0xFF);
         write(Space::BLOCK_0 + 0x01, 0x00);
         write(Space::BLOCK_0 + 0x02, 0x7E);
@@ -73,7 +73,7 @@ VRAM::VRAM(PPU& ppu, MMU& mmu)
         write(Space::BLOCK_0 + 0x2E, 0x00);
         write(Space::BLOCK_0 + 0x2F, 0xFF);
 
-        write(Space::TILEMAP_0 + 0x00, 0x00);
+        write(Space::TILEMAP_0 + 0x00, 0x00); */
     }
 
 uint8_t VRAM::read(uint16_t addr) const { 

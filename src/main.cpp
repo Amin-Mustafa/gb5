@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     Disassembler dis(mem);
     LCD display(3);
 
-    std::string cart = "../ROM/test.gb";
+    std::string cart = "../ROM/drmario.gb";
 
     map.rom.load(cart);
     ppu.connect_display(&display);

@@ -31,6 +31,7 @@ private:
     BgFifo bg_fifo;
     SprFifo spr_fifo;
     uint8_t scanline_x;     //position on screen (0-159)
+    uint8_t oam_counter;
     LCD* screen;
     bool in_window;
     bool window_triggered() const;

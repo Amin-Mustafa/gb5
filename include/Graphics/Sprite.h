@@ -46,6 +46,7 @@ public:
         return buf[index];
     }
     uint8_t count() const {return sprite_count;}
+    bool full() const {return sprite_count == buf.size();}
 
     void push_sprite(const Sprite& spr) {
         if(sprite_count == buf.size()) {
