@@ -17,7 +17,7 @@ OAM::OAM(MMU& mmu)
     {
         //test sprites
         /* write(START + 0x00, 16);
-        write(START + 0x01, 16);
+        write(START + 0x01, 3);
         write(START + 0x02, 1); 
 
         write(START + 0x10, 16);
@@ -25,6 +25,6 @@ OAM::OAM(MMU& mmu)
         write(START + 0x12, 1);
 
         write(START + 0x20, 16);
-        write(START + 0x21, 28);
+        write(START + 0x21, 5);
         write(START + 0x22, 2); */
     }

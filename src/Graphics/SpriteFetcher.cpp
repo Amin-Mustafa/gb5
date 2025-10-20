@@ -10,6 +10,7 @@ constexpr int GET_ROW_START = 1;
 constexpr int GET_LINE_START = 4;
 constexpr int PUSH_START = 5;
 constexpr int SCREEN_Y_OFFSET = 16;
+constexpr int SCREEN_X_OFFSET = 8;
 constexpr int BASE_SPR_HEIGHT = 8;
 
 std::string sprite_info(const Sprite& spr);
@@ -89,19 +90,34 @@ void SpriteFetcher::get_tile_line() {
 }
 
 void SpriteFetcher::push_to_fifo() {
+    const Sprite* spr = spr_queue.pop();
+    //color index from vram, attributes from spr
     SpritePixel spr_px;
 
-    for(uint8_t px = 0; px < px_buf.size(); ++px) {
-        spr_px.color = px_buf[px];
-        spr_px.x = spr_queue.front()->x() + px;
-        spr_px.palette = spr_queue.front()->palette();
-        spr_px.priority = spr_queue.front()->priority();
+    bool reversed = spr->x_flip();
+    int start, end, step;
+
+    if(reversed) {
+        start = px_buf.size() - 1;
+        end   = -1; 
+        step  = -1;
+    } else {
+        start = 0;
+        end   = px_buf.size();
+        step  = 1;
+    }
+
+    for(int i = start; i != end; i += step) {
+        spr_px.color = px_buf[i];
+        spr_px.x = spr->x() + (reversed ? (px_buf.size()-1-i) : i);
+        spr_px.palette = spr->palette();
+        spr_px.priority = spr->priority();
         
-        if(!px_occupied(fifo, spr_px)) {
+        if(!px_occupied(fifo, spr_px) && spr_px.x >= SCREEN_X_OFFSET) {
             fifo.push(spr_px);
         }
     }
-    spr_queue.pop();
+
     if(spr_queue.empty()) {
         stop();
     } else {
