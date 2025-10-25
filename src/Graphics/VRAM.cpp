@@ -5,22 +5,10 @@
 #include "../../include/Graphics/PPU.h"
 #include <format>
 
-VRAM::VRAM(PPU& ppu, MMU& mmu)
-    :region {
-        mmu,
-        START, END,
-        [this, &ppu](uint16_t addr)->uint8_t {
-            if(!accessible) {
-                return 0xFF;
-            }
-            return data[addr - START];
-        },
-        [this, &ppu](uint16_t addr, uint8_t val) { 
-            if(!accessible) return;
-            data[addr - START] = val;
-        }
-    }
+VRAM::VRAM(MMU& mmu)
+    :region {this, START, END}
     {
+        mmu.add_region(&region);
         //test tile
        /*write(Space::BLOCK_0 + 0x00, 0xFF);
         write(Space::BLOCK_0 + 0x01, 0x00);

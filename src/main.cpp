@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     Disassembler dis(mem);
     LCD display(3);
 
-    std::string cart = "../ROM/drmario.gb";
+    std::string cart = "../ROM/01-special.gb";
 
     map.rom.load(cart);
     ppu.connect_display(&display);
@@ -32,57 +32,21 @@ int main(int argc, char* argv[]) {
         while(SDL_PollEvent(&e)) {
             if(e.type == SDL_QUIT) {
                 quit = true;
-            } else if (e.type == SDL_KEYDOWN) {
-                switch (e.key.keysym.sym) {
-                    case SDLK_SPACE:    //step one dot
-                        ppu.print_state();
-                        ppu.tick();
-                        cycles++;
-                        display.draw_frame();
-                        if ((cycles % 4) == 0) {
-                            cpu.tick();
-                            mem.tick();
-                        }
-                        if (cycles == SCANLINE_DOTS) {
-                            frame_count++;
-                            cycles = 0;
-                        }
-                        break;
-                    case SDLK_RETURN:  //step one scanline
-                        for (size_t i = 0; i < SCANLINE_DOTS; i++) {
-                            ppu.tick();
-                            //ppu.print_state();
-                            cycles++;
-
-                            if ((cycles % 4) == 0) {
-                                cpu.tick();
-                                mem.tick();
-                            }
-                        }
-                        cycles = 0;
-                        display.draw_frame();
-                        break;
-                    case SDLK_f:  //step one frame
-                        for (size_t i = 0; i < FRAME_DOTS; i++) {
-                            ppu.tick();
-                            //ppu.print_state();
-                            cycles++;
-
-                            if ((cycles % 4) == 0) {
-                                cpu.tick();
-                                mem.tick();
-                            }
-                        }
-                        cycles = 0;
-                        display.draw_frame();
-                        break;
-                    case SDLK_ESCAPE:
-                        quit = true;
-                        break;
-                }
             }
         }
-        SDL_Delay(1);
+        for (size_t i = 0; i < FRAME_DOTS; i++) {
+            ppu.tick();
+            //ppu.print_state();
+            cycles++;
+
+            if ((cycles % 4) == 0) {
+                cpu.tick();
+                mem.tick();
+            }
+        }
+        cycles = 0;
+        display.draw_frame();
     }
+
     return 0;
 }

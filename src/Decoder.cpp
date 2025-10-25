@@ -282,7 +282,7 @@ void Decoder::init_instruction_table(CPU& cpu) {
     inst_table[0xEF] = RST(0x28);
 
     inst_table[0xF0] = LDH_A_n();
-    inst_table[0xF1] = POP_rr(cpu.A, cpu.F);
+    inst_table[0xF1] = POP_AF();
     inst_table[0xF2] = LDH_A_C();
     inst_table[0xF3] = DI();
     inst_table[0xF4] = NOP();

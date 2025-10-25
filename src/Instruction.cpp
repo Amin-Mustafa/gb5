@@ -323,6 +323,23 @@ Instruction POP_rr(uint8_t& hi, uint8_t& lo) {
     };
 }
 
+Instruction POP_AF() {
+    return Instruction {
+        [](CPU& cpu) {
+            cpu.latch.Z = cpu.read_memory(cpu.sp);
+            cpu.sp++;
+        },
+        [](CPU& cpu) {
+            cpu.latch.W = cpu.read_memory(cpu.sp);
+            cpu.sp++;
+        },
+        [](CPU& cpu) {
+            cpu.A = cpu.latch.W;
+            cpu.F = cpu.latch.Z & 0xF0;
+        }
+    };
+}
+
 Instruction LD_HL_SPe() {
     return Instruction {
         [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},

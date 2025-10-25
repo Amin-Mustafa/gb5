@@ -67,6 +67,7 @@ Instruction LD_SP_HL();
 Instruction LD_SP_n16();
 Instruction PUSH_rr(uint8_t& hi, uint8_t& lo);
 Instruction POP_rr(uint8_t& hi, uint8_t& lo);
+Instruction POP_AF();
 Instruction LD_HL_SPe();
 
 //------------------- ARITHMETIC -------------------//

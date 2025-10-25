@@ -17,6 +17,13 @@ public:
     MappedRegister(MMU& mmu, uint16_t addr);
     uint8_t get() const {return data;}
     void set(uint8_t val) {data = val;}
+    
+    uint8_t ext_read(uint16_t addr) {
+        return data;
+    }
+    void ext_write(uint16_t addr, uint8_t val) {
+        data = val;
+    }
 };
 
 #endif

@@ -30,7 +30,7 @@ uint8_t mix_pixel(uint8_t bg_px, SpritePixel spr_px, const PPURegs& regs);
 std::string ppu_state_to_str(PPU::State state);
 
 PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
-    :vram{*this, mmu},
+    :vram{mmu},
      oam{mmu},
      regs{mmu}, 
      mmu{mmu},
@@ -77,12 +77,6 @@ bool PPU::window_triggered() const {
 uint8_t PPU::sprite_triggered() const {
     for(int i = 0; i < spr_buf.count(); ++i) {
         if( scanline_x == spr_buf.at(i).x() - 2*SCREEN_X_OFFSET ) {
-            std::cout << std::format(
-                "Sprite triggered: X:{}, Y:{}, Index:{:02x}\n",
-                (int)spr_buf.at(i).x(),
-                (int)spr_buf.at(i).y(),
-                (int)spr_buf.at(i).index()
-            );
             return i;
         }
     }
@@ -166,12 +160,6 @@ void PPU::oam_scan() {
             int pos = regs.ly - (spr.y() - SCREEN_Y_OFFSET);
             
             if(pos >= 0 && pos < spr_height) {
-                std::cout << "OAM counter = " << (int)oam_counter << "\t";
-                std::cout << "Sprite found at " << (int)regs.ly << "\t";
-                std::cout << std::format(
-                    "X:{:d}, Y{:d}, Index:{:02x}\n",
-                    spr.x(), spr.y(), spr.index()
-                );
                 spr_buf.push_sprite(spr);
             }
         }

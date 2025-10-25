@@ -42,12 +42,6 @@ public:
         return on;
     }
     void queue_sprite(const Sprite& spr) {
-        std::cout << std::format(
-            "Sprite QUEUED: X:{}, Y:{}, Index{:02x}\n",
-            (int)spr.x(),
-            (int)spr.y(),
-            (int)spr.index()
-        );
         spr_queue.push(&spr);
     }
 

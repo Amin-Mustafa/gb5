@@ -6,12 +6,10 @@
 
 ROM::ROM(MMU& mmu)
 	:data(0x8000),
-	 region{
-		mmu,
-		0x0000, 0x7FFF,
-		[this](uint16_t addr) {return data[addr];},
-		[](uint16_t, uint8_t){}
-	 } {}
+	 region{this, START, END} 
+	 {
+		mmu.add_region(&region);
+	 }
 
 void ROM::load(const std::string& filename){
 	std::ifstream ifs(filename, std::ios::binary);

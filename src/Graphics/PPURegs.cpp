@@ -5,13 +5,10 @@
 
 PPURegs::PPURegs(MMU& mmu) 
 //read/write via MMU
-    :region{
-        mmu,
-        START, END,
-        [this](uint16_t addr) { return read(addr); },
-        [this, &mmu](uint16_t addr, uint8_t val) { write(mmu, addr, val); }
-    }
+    :mmu{mmu},
+     region{this, START, END}
     {
+        mmu.add_region(&region);
         //defaults
         lcdc    = 0x91;
         stat    = 0x85;
@@ -28,7 +25,7 @@ PPURegs::PPURegs(MMU& mmu)
 
     }
 
-uint8_t PPURegs::read(uint16_t addr) const {
+uint8_t PPURegs::ext_read(uint16_t addr) {
     switch(addr) {
         case Space::LCDC: return lcdc;
         case Space::STAT: return stat;
@@ -45,7 +42,7 @@ uint8_t PPURegs::read(uint16_t addr) const {
         default: return 0xFF;
     }
 }
-void PPURegs::write(MMU& mmu, uint16_t addr, uint8_t val) {
+void PPURegs::ext_write(uint16_t addr, uint8_t val) {
     switch(addr) {
         case Space::LCDC: lcdc  = val;  break;
         case Space::STAT: stat = ((val & ~0x03) | (stat & 0x03)); break;

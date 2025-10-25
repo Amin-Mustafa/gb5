@@ -11,9 +11,11 @@ class SerialPort {
 //TODO: make this functional with master and slave gameboys
 //for now this is only for serial debugging e.g. Blargg tests
 public:
+    static constexpr uint16_t START = 0xFF01;
+    static constexpr uint16_t END   = 0xFF02;
     SerialPort(MMU& mem);
-    uint8_t serial_read(uint16_t addr);
-    void serial_write(uint16_t addr, uint8_t val); 
+    uint8_t ext_read(uint16_t addr);
+    void ext_write(uint16_t addr, uint8_t val); 
 private: 
     //Serial port maps 0xFF01 and 0xFF02 
     uint8_t serial[2];      

@@ -3,7 +3,7 @@
 #include "../../include/Memory/MMU.h"
 #include "../../include/Memory/MemoryRegion.h"
 
-uint8_t SerialPort::serial_read(uint16_t addr) {
+uint8_t SerialPort::ext_read(uint16_t addr) {
     switch(addr) {
         case 0xFF01: return serial[0];
         case 0xFF02: return serial[1];
@@ -11,7 +11,7 @@ uint8_t SerialPort::serial_read(uint16_t addr) {
     }
 }
 
-void SerialPort::serial_write(uint16_t addr, uint8_t val){
+void SerialPort::ext_write(uint16_t addr, uint8_t val){
     switch(addr) {
         case 0xFF01: 
             serial[0] = val;
@@ -24,12 +24,10 @@ void SerialPort::serial_write(uint16_t addr, uint8_t val){
 }
 
 SerialPort::SerialPort(MMU& mmu)
-    :region {
-        mmu,
-        0xFF01, 0xFF02,
-        [this](uint16_t addr){return serial_read(addr);},
-        [this](uint16_t addr, uint8_t val) { serial_write(addr,val); }
-    } {
+    :region {this, START, END} 
+    {
+        mmu.add_region(&region);
+        
         serial[0] = 0x00;
         serial[1] = 0x7E;
     }
