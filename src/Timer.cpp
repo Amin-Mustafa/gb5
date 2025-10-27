@@ -58,11 +58,10 @@ unsigned long Timer::frequency() const {
 
 void Timer::tick() {
     div++;  // Keep incrementing every cycle
-    
-    // Check falling edges based on selected frequency
-    bool bit = div & frequency();
+    cycles++;
 
-    if(enabled() && increment_trigger.falling_edge(bit)) {
+    if( enabled() && (cycles >= frequency()) ) {
+        cycles = 0;
         counter++;
         if(counter == 0) {
             counter = modulo;
