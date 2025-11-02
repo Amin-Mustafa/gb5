@@ -39,7 +39,7 @@ inline uint8_t rot_right_circ(uint8_t num, bool& carry) {
 inline uint8_t rot_right(uint8_t num, bool& carry){
     bool old_carry = carry;
     carry = num & 1;
-    return (num >> 1) | (old_carry << 7);
+    return ((num >> 1) | (old_carry << 7));
 }
 inline uint8_t shift_left_arithmetic(uint8_t num, bool& carry) {
     carry = num >> 7;
@@ -48,7 +48,7 @@ inline uint8_t shift_left_arithmetic(uint8_t num, bool& carry) {
 inline uint8_t shift_right_arithmetic(uint8_t num, bool& carry) {
     uint8_t msb = num & 0x80;
     carry = num & 1;
-    return (num >> 1) | msb;
+    return ((num >> 1) | msb);
 }
 inline uint8_t shift_right_logical(uint8_t num, bool& carry){
     carry = num & 1;
@@ -58,13 +58,13 @@ inline uint8_t swap_nibs(uint8_t num){
     return ( (num & 0x0F) << 4 | (num & 0xF0) >> 4 );
 }
 inline uint8_t bit_set(uint8_t num, uint8_t bit) {
-    return num | ((uint8_t)1 << bit);
+    return (num | ((uint8_t)1 << bit));
 }
 inline uint8_t bit_clear(uint8_t num, uint8_t bit) {
-    return num & ~((uint8_t)1 << bit);
+    return (num & ~((uint8_t)1 << bit));
 }
 inline bool bit_check(uint8_t num, uint8_t bit) {
-    return (num >> bit) & (uint8_t)1;
+    return ((num >> bit) & 1);
 }
 }
 

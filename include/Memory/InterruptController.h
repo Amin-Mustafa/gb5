@@ -11,7 +11,7 @@ class CPU;
 
 
 enum class Interrupt : uint8_t {
-    VBLANK = 0, LCD, SERIAL, TIMER, JOYPAD,
+    VBLANK = 0, LCD, TIMER, SERIAL, JOYPAD,
     NULL_INTERRUPT //in case of error
 };
 
@@ -22,8 +22,8 @@ public:
     static constexpr std::array<Interrupt, 5> sources = {
         Interrupt::VBLANK,
         Interrupt::LCD,
-        Interrupt::SERIAL,
         Interrupt::TIMER,
+        Interrupt::SERIAL,
         Interrupt::JOYPAD
     };
     

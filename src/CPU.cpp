@@ -101,9 +101,6 @@ void CPU::interrupted() {
         case Interrupt::JOYPAD  : std::cout << "JOYPAD INTERRUPT"   << '\n';    break;
         default: break;
     } */
-    if(pending_int == Interrupt::TIMER) {
-        std::cout << "TIMER INTERRUPT CALLED\n";
-    }
 
     current_inst = decoder->isr(pending_int);
     current_state = execute_fetch;

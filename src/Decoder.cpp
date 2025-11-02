@@ -363,7 +363,7 @@ void Decoder::init_cb_table(CPU& cpu) {
 void Decoder::init_ivt(CPU& cpu) {
     ivt[static_cast<uint8_t>(Interrupt::VBLANK)]    = RST(0x40);
     ivt[static_cast<uint8_t>(Interrupt::LCD)]       = RST(0x48);
-    ivt[static_cast<uint8_t>(Interrupt::SERIAL)]    = RST(0x50);
-    ivt[static_cast<uint8_t>(Interrupt::TIMER)]     = RST(0x58);
+    ivt[static_cast<uint8_t>(Interrupt::TIMER)]    = RST(0x50);
+    ivt[static_cast<uint8_t>(Interrupt::SERIAL)]     = RST(0x58);
     ivt[static_cast<uint8_t>(Interrupt::JOYPAD)]    = RST(0x60);
 }

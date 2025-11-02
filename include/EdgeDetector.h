@@ -11,9 +11,9 @@ public:
         return rising;
     }
     bool falling_edge(bool current) {
-        bool rising = previous && !current;
+        bool falling = previous && !current;
         previous = current;
-        return rising;
+        return falling;
     }
     void set_state(bool state) {
         previous = state;
