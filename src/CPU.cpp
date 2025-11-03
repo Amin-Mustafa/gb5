@@ -25,6 +25,13 @@ CPU::CPU(MMU& mmu, InterruptController& interrupt_controller):
 
 CPU::~CPU() = default;
 
+void CPU::tick() {
+    if(mmu.dma_active()) {
+        return; //TODO: let CPU execute from HRAM
+    }
+    (this->*current_state)();
+}
+
 uint8_t CPU::read_memory(uint16_t addr) { 
         return mmu.read(addr);
     }
@@ -43,12 +50,15 @@ uint8_t CPU::fetch_byte() {
 }
 
 Instruction* CPU::fetch_inst() {
+    static Disassembler dis(mmu);
     uint8_t opcode = fetch_byte();
 
     if(cb_mode) {
         cb_mode = false;
+        //dis.disassemble_prefix_op(pc);
         return decoder->decode_cb(opcode);
     }
+    //dis.disassemble_at(pc);
     return decoder->decode(opcode);
 }
 
@@ -76,10 +86,6 @@ void CPU::execute_fetch() {
         //once reach end, fetch next instruction in same cycle
         cycles = 0;
         current_inst = fetch_inst();
-        if(int_enable_pending) {
-            int_enable_pending = false;
-            IME = true;
-        }
         if(IME && interrupt_controller.active()) {
             current_state = interrupted;
         }
@@ -92,15 +98,6 @@ void CPU::interrupted() {
 
     IME = false;
     interrupt_controller.clear(pending_int);
-
-/*     switch(pending_int) {
-        case Interrupt::VBLANK  : std::cout << "VBLANK INTERRUPT"   << '\n';    break;
-        case Interrupt::LCD     : std::cout << "LCD INTERRUPT"      << '\n';    break;
-        case Interrupt::SERIAL  : std::cout << "SERIAL INTERRUPT"   << '\n';    break;
-        case Interrupt::TIMER   : std::cout << "TIMER INTERRUPT"    << '\n';    break;
-        case Interrupt::JOYPAD  : std::cout << "JOYPAD INTERRUPT"   << '\n';    break;
-        default: break;
-    } */
 
     current_inst = decoder->isr(pending_int);
     current_state = execute_fetch;
@@ -141,7 +138,7 @@ void CPU::print_state(){
             A, B, C, D, E, H, L, mmu.read(pair(H,L))
         )
         <<
-        std::format("IF:{:02x}, IE:{:02x}, IME:{}, ", mmu.read(0xFF0F), mmu.read(0xFFFF), IME) 
+        std::format("IME:{}, ", IME) 
         <<
         std::format(
             "PC:{:04x}, SP:{:04x}, F:{:d}{:d}{:d}{:d}\n", pc, sp, get_flag(Flag::ZERO),

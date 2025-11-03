@@ -5,13 +5,12 @@
 #include <stdexcept>
 
 MMU::MMU()  
-    :dmac{std::make_unique<DmaController>()} 
-    {}
+    :dmac{std::make_unique<DmaController>()},
+     memory_lookup(0x10000, nullptr)
+    {
+    }
 
 MMU::~MMU() = default;
-
-bool addr_in_hram(uint16_t addr);
-bool addr_in_vram(uint16_t addr);
 
 void MMU::add_region(MemoryRegion* region){
     printf("MAPPED REGION FROM %04x to %04x\n", region->start(), region->end());
@@ -29,7 +28,7 @@ MemoryRegion* MMU::region_of(uint16_t addr) {
 }
 uint8_t MMU::read(uint16_t addr) {
     if(dmac->active() && !addr_in_hram(addr)) {
-        //ignore reads to values not in HRAM
+        //ignore reads not in HRAM
         return 0xFF;    
     }
     return region_of(addr)->read(addr);
@@ -53,6 +52,10 @@ void MMU::start_dma(uint8_t page) {
     uint16_t start_addr = (uint16_t)page << 8; 
     //start DMA
     dmac->start(start_addr);
+}
+
+bool MMU::dma_active() const {
+    return dmac->active();
 }
 
 void MMU::tick() {

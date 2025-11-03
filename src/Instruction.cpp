@@ -766,14 +766,34 @@ Instruction RST(uint8_t addr) {
     return Instruction {
         [](CPU& cpu) {cpu.sp--;},
         [](CPU& cpu) {
-            cpu.write_memory(cpu.sp, (cpu.pc + 1) >> 8);
+            //push address of instruction after the RST
+            cpu.write_memory(cpu.sp, (cpu.pc+1) >> 8);
             cpu.sp--;
         },
         [addr](CPU& cpu) {
-            cpu.write_memory(cpu.sp, (cpu.pc + 1) & 0xff);
+            cpu.write_memory(cpu.sp, (cpu.pc+1) & 0xff);
             cpu.pc = addr - 1;
         },
         [](CPU& cpu) {}
+    };
+}
+
+Instruction ISR(uint8_t addr) {
+    return Instruction {
+        [](CPU& cpu) {cpu.sp--;},
+        [](CPU& cpu) {
+            //unlike RST, we push address of instruction in which 
+            //the CPU was interrupted
+            cpu.write_memory(cpu.sp, cpu.pc >> 8); // Push PCH
+            cpu.sp--;
+        },
+        [addr](CPU& cpu) {
+            cpu.write_memory(cpu.sp, cpu.pc & 0xff); // Push PCL
+            cpu.pc = addr - 1; // Set PC for next fetch
+        },
+        [](CPU& cpu) {
+
+        }
     };
 }
 
@@ -786,7 +806,7 @@ Instruction DI() {
 Instruction EI() {
     return Instruction {
         [](CPU& cpu) {
-            cpu.int_enable_pending = true;
+            cpu.IME = true;
         }
     };
 }

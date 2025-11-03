@@ -24,9 +24,7 @@ public: //methods
     ~CPU();
     
     //cpu clocked in m-cycles (1 m-cycle = 4 t-states)
-    void tick() {
-        (this->*current_state)();
-    }
+    void tick();
     
     void print_state();
     void log_state(std::ostream& os);

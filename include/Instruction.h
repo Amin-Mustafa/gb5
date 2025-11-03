@@ -121,6 +121,7 @@ Instruction RET();
 Instruction RET_IF(ConditionCheck cc);
 Instruction RETI();
 Instruction RST(uint8_t addr);
+Instruction ISR(uint8_t addr);
 
 //--------------------------MISC------------------------//
 Instruction DI();

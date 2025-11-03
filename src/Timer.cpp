@@ -11,13 +11,14 @@ enum TimerAddress {
 };
 
 constexpr unsigned long CLOCK_SPEED = 4194304;
+uint8_t frequency_bit(uint8_t control_reg);
 
 Timer::Timer(MMU& mmu, InterruptController& int_controller)
     :div{0x18},
      counter{0x00},
      modulo{0x00},
      control{0xF8},
-     cycles{0},
+     increment_trigger{},
      region{this, START, END},
      ic{int_controller}
     {
@@ -46,27 +47,28 @@ void Timer::ext_write(uint16_t addr, uint8_t val) {
     }
 }
 
-unsigned long Timer::frequency() const {
-    uint8_t freq = control & 0x03;
-    switch(freq) {
-        case 0: return 1024;
-        case 1: return 16;
-        case 2: return 64;
-        case 3: return 256;
-    }
-}
-
 void Timer::tick() {
-    div++;  // Keep incrementing every cycle
-    cycles++;
+    uint16_t old_div = div;  // Keep incrementing every cycle
+    div++;
 
-    if( enabled() && (cycles >= frequency()) ) {
-        cycles = 0;
+    bool old_inc = (old_div >> frequency_bit(control)) & 1;
+    bool new_inc = (div >> frequency_bit(control)) & 1;
+
+    if( enabled() && (old_inc && !new_inc) ) {
         counter++;
         if(counter == 0) {
             counter = modulo;
             ic.request(Interrupt::TIMER);
-            std::cout << "TIMER INTERRUPT REQUESTED\n";
         }
+    }
+}
+
+uint8_t frequency_bit(uint8_t control_reg) {
+    switch(control_reg & 0x03) {
+        case 0 : return 9;
+        case 1 : return 3;
+        case 2 : return 5;
+        case 3 : return 7;
+        default: return 0;
     }
 }

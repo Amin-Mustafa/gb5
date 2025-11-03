@@ -30,6 +30,9 @@ private:
     }
 
 public:
+    MemoryRegion(const MemoryRegion&)=delete;
+    MemoryRegion& operator=(const MemoryRegion&)=delete;
+
     uint16_t start() const {return start_addr;}
     uint16_t end() const {return end_addr;}
 
@@ -38,7 +41,7 @@ public:
         return read_fn(ctx, addr);
     }
     void write(uint16_t addr, uint8_t val) {
-        assert(read_fn && ctx);
+        assert(write_fn && ctx);
         write_fn(ctx, addr, val);
     }
 

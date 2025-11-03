@@ -8,6 +8,12 @@
 using std::ref;
 using namespace Operation;
 
+constexpr uint8_t VBLANK_ISR = 0x40;
+constexpr uint8_t LCD_ISR    = 0x48;
+constexpr uint8_t TIMER_ISR  = 0x50;
+constexpr uint8_t SERIAL_ISR = 0x58;
+constexpr uint8_t JOYPAD_ISR = 0x60;
+
 bool NZ(const uint8_t& f) {return !Arithmetic::bit_check(f, (int)Flag::ZERO);}
 bool Z (const uint8_t& f) {return  Arithmetic::bit_check(f, (int)Flag::ZERO);}
 bool NC(const uint8_t& f) {return !Arithmetic::bit_check(f, (int)Flag::CARRY);}
@@ -361,9 +367,9 @@ void Decoder::init_cb_table(CPU& cpu) {
 }
 
 void Decoder::init_ivt(CPU& cpu) {
-    ivt[static_cast<uint8_t>(Interrupt::VBLANK)]    = RST(0x40);
-    ivt[static_cast<uint8_t>(Interrupt::LCD)]       = RST(0x48);
-    ivt[static_cast<uint8_t>(Interrupt::TIMER)]    = RST(0x50);
-    ivt[static_cast<uint8_t>(Interrupt::SERIAL)]     = RST(0x58);
-    ivt[static_cast<uint8_t>(Interrupt::JOYPAD)]    = RST(0x60);
+    ivt[static_cast<uint8_t>(Interrupt::VBLANK)]    = ISR(VBLANK_ISR);
+    ivt[static_cast<uint8_t>(Interrupt::LCD)]       = ISR(LCD_ISR);
+    ivt[static_cast<uint8_t>(Interrupt::TIMER)]     = ISR(TIMER_ISR);
+    ivt[static_cast<uint8_t>(Interrupt::SERIAL)]    = ISR(SERIAL_ISR);
+    ivt[static_cast<uint8_t>(Interrupt::JOYPAD)]    = ISR(JOYPAD_ISR);
 }

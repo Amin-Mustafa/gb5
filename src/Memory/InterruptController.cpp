@@ -38,5 +38,5 @@ Interrupt InterruptController::pending() {
         }
     }
 
-    return Interrupt::NULL_INTERRUPT;
+    throw std::runtime_error("BAD INTERRUPT");
 }

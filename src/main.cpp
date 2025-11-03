@@ -35,6 +35,9 @@ int main(int argc, char* argv[]) {
     unsigned long cycles = 0;
     unsigned long frame_count = 0;
 
+    /* for(int i = 0; i < 100; ++i) {
+        cpu.tick();
+    } */
     while(!quit) {
         for (size_t i = 0; i < FRAME_DOTS; i++) {
             ppu.tick();
