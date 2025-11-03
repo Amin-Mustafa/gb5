@@ -11,8 +11,7 @@ class CPU;
 
 
 enum class Interrupt : uint8_t {
-    VBLANK = 0, LCD, TIMER, SERIAL, JOYPAD,
-    NULL_INTERRUPT //in case of error
+    VBLANK = 0, LCD, TIMER, SERIAL, JOYPAD
 };
 
 class InterruptController {
