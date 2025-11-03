@@ -75,6 +75,9 @@ bool PPU::window_triggered() const {
 }    
 
 uint8_t PPU::sprite_triggered() const {
+    if(!LCDC::obj_enable(regs)) {
+        return spr_buf.count();
+    }
     for(int i = 0; i < spr_buf.count(); ++i) {
         if( scanline_x == spr_buf.at(i).x() - 2*SCREEN_X_OFFSET ) {
             return i;
@@ -149,7 +152,7 @@ void PPU::oam_scan() {
     }
     if((cycles % 2) == 0) {
         //every 2 dots
-        if(!spr_buf.full()) {
+        if(!spr_buf.full() && LCDC::obj_enable(regs)) {
             //current sprite
             Sprite spr = oam.sprite_at(Space::OAM_START + oam_counter*SPRITE_BYTES);
 
@@ -319,7 +322,7 @@ uint8_t mix_pixel(uint8_t bg_px, SpritePixel spr_px, const PPURegs& regs) {
     Sprite::Palette pal = spr_px.palette;
     uint8_t color = 0;
 
-    if(!spr_px.color) {
+    if(!spr_px.color || !LCDC::obj_enable(regs)) {
         color = display_color(regs.bgp, bg_px);
     } else if(prio == Sprite::Priority::BACK && bg_px) {
         color = display_color(regs.bgp, bg_px);
