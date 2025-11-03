@@ -8,7 +8,7 @@ private:
 
 public:
     //button mappings
-    enum class Mapping : int {
+    enum class Mapping : Uint8 {
         LEFT   = SDL_SCANCODE_LEFT,
         RIGHT  = SDL_SCANCODE_RIGHT,
         DOWN   = SDL_SCANCODE_DOWN,

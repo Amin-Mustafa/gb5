@@ -35,13 +35,11 @@ int main(int argc, char* argv[]) {
     unsigned long cycles = 0;
     unsigned long frame_count = 0;
 
-    /* for(int i = 0; i < 100; ++i) {
-        cpu.tick();
-    } */
     while(!quit) {
         for (size_t i = 0; i < FRAME_DOTS; i++) {
             ppu.tick();
             tim.tick();
+            jp.read_input();
             cycles++;
 
             if ((cycles % 4) == 0) {
@@ -49,14 +47,15 @@ int main(int argc, char* argv[]) {
                 mem.tick();
             }
         }
+
+        cycles = 0;
+        display.draw_frame();
+
         while(SDL_PollEvent(&e)) {
             if(e.type == SDL_QUIT) {
                 quit = true;
             }
         }
-
-        cycles = 0;
-        display.draw_frame();
     }
 
     return 0;

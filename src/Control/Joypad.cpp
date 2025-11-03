@@ -47,6 +47,7 @@ void JoyPad::read_input() {
    };
    
    int mode = buttons_enabled()? 1 : dpad_enabled()? 0 : -1;
+   uint8_t old_data = data;
 
    ih->get_key_state();
 
@@ -56,7 +57,13 @@ void JoyPad::read_input() {
          if(ih->key_pressed(mapping.key)) {
             //bit clear because active low
             data = Arithmetic::bit_clear(data, mapping.bit);
+            if(Arithmetic::bit_check(old_data, mapping.bit)) {
+               //falling edge
+               ic.request(Interrupt::JOYPAD);
+            }
             std::cout << "BUTTON PRESSED: " << print_button(mapping.key) << '\n';
+         } else {
+            data = Arithmetic::bit_set(data, mapping.bit);
          }
       }
    }
@@ -64,12 +71,12 @@ void JoyPad::read_input() {
 }
 
 uint8_t JoyPad::ext_read(uint16_t addr) {
-   return data;
+   return data | 0xC0;
 }
 
 void JoyPad::ext_write(uint16_t addr, uint8_t val) {
    //lower nibble is read-only
-   data = (val & 0xF0) | (data & 0x0F);
+   data = (val & 0x30) | (data & 0xCF);
 }
 
 std::string print_button(InputHandler::Mapping key) {
