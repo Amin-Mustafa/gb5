@@ -5,6 +5,7 @@
 #include <iostream>
 #include <functional>
 #include <cstdint>
+#include <algorithm>
 
 class CPU;
 
@@ -16,14 +17,18 @@ public:
         :ops{} {}
 
     Instruction(std::initializer_list<MicroOp> sub_ops)
-        :ops{sub_ops} {}
+        {
+            len = std::min(ops.size(), sub_ops.size());
+            std::copy(sub_ops.begin(), sub_ops.begin() + len, ops.begin());
+        }
 
-    int length() const {return ops.size();}
+    int length() const {return len;}
     void execute_subop(CPU& cpu, int index) { ops[index](cpu); }
 private:
     //each instruction is divided into atomic sub-operations
     //that each take 1 cpu m-cycle
-    std::vector<MicroOp> ops; 
+    std::array<MicroOp, 6> ops; 
+    size_t len;
 };
 
 namespace Operation {

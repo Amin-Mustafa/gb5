@@ -9,12 +9,12 @@ private:
 public:
     //button mappings
     enum class Mapping : Uint8 {
-        LEFT   = SDL_SCANCODE_LEFT,
-        RIGHT  = SDL_SCANCODE_RIGHT,
-        DOWN   = SDL_SCANCODE_DOWN,
-        UP     = SDL_SCANCODE_UP,
-        A      = SDL_SCANCODE_Z,
-        B      = SDL_SCANCODE_X,
+        LEFT   = SDL_SCANCODE_A,
+        RIGHT  = SDL_SCANCODE_D,
+        DOWN   = SDL_SCANCODE_S,
+        UP     = SDL_SCANCODE_W,
+        A      = SDL_SCANCODE_L,
+        B      = SDL_SCANCODE_K,
         START  = SDL_SCANCODE_RETURN,
         SELECT = SDL_SCANCODE_SPACE,
     };
