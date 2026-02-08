@@ -18,7 +18,6 @@ void Bus::cycle() {
     for(int i = 0; i < 4; ++i) {
         ppu->tick();
         tim->tick();
-        jp->read_input();
     }
     cycles++;
 }

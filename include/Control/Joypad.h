@@ -17,6 +17,9 @@ private:
     InterruptController& ic;
 
     InputHandler* ih;   //SDL input handler to capture current key state
+
+    uint8_t dpad_state;
+    uint8_t button_state;
 public:
     static constexpr uint16_t ADDRESS = 0xFF00;
     JoyPad(Bus& bus, MMU& mmu, InterruptController& ic);

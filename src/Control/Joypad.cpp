@@ -20,7 +20,9 @@ std::string print_button(InputHandler::Mapping key);
 JoyPad::JoyPad(Bus& bus, MMU& mmu, InterruptController& int_controller)
     :data{0xCF},
      region{this, ADDRESS, ADDRESS},
-     ic{int_controller} 
+     ic{int_controller},
+     dpad_state{0x0F}, 
+     button_state{0x0F}
      {
         mmu.add_region(&region);
         bus.connect(*this);
@@ -28,6 +30,13 @@ JoyPad::JoyPad(Bus& bus, MMU& mmu, InterruptController& int_controller)
     
 
 void JoyPad::read_input() {   
+   if(!ih) return;
+
+   uint8_t old_output = ext_read(ADDRESS);
+   //reset input state
+   dpad_state = 0x0F;
+   button_state = 0x0F;
+
    static const struct {
       InputHandler::Mapping key;
       uint8_t bit;
@@ -48,32 +57,40 @@ void JoyPad::read_input() {
       }
    };
    
-   int mode = buttons_enabled()? 1 : dpad_enabled()? 0 : -1;
-   uint8_t old_data = data;
-
    ih->get_key_state();
 
-   if(mode >= 0) {
-      //can read keys
-      for(const auto& mapping : key_bit_map[mode]) {
-         if(ih->key_pressed(mapping.key)) {
-            //bit clear because active low
-            data = Arithmetic::bit_clear(data, mapping.bit);
-            if(Arithmetic::bit_check(old_data, mapping.bit)) {
-               //falling edge
-               //std::cout << "BUTTON PRESSED: " << print_button(mapping.key) << '\n';
-               ic.request(Interrupt::JOYPAD);
-            }
-         } else {
-            data = Arithmetic::bit_set(data, mapping.bit);
-         }
-      }
-   }
+   for (int m = 0; m < 2; m++) {
+       for(const auto& mapping : key_bit_map[m]) {
+          if(ih->key_pressed(mapping.key)) {
+             if(m == 0) {
+                dpad_state = Arithmetic::bit_clear(dpad_state, mapping.bit);
+             } else {
+                button_state = Arithmetic::bit_clear(button_state, mapping.bit);
+             }
+          }
+       }
+    }
 
+   uint8_t new_output = ext_read(ADDRESS);
+
+   if ((old_output & ~new_output) & 0x0F) {
+      //falling edge
+      //std::cout << "BUTTON PRESSED: " << print_button(mapping.key) << '\n';
+      ic.request(Interrupt::JOYPAD);
+   }
 }
 
 uint8_t JoyPad::ext_read(uint16_t addr) {
-   return data | 0xC0;
+   uint8_t output = data | 0xCF;
+   
+   if (dpad_enabled()) {
+        output &= dpad_state;
+    }
+    if (buttons_enabled()) {
+        output &= button_state;
+    }
+
+   return output;
 }
 
 void JoyPad::ext_write(uint16_t addr, uint8_t val) {

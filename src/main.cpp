@@ -42,6 +42,7 @@ int main(int argc, char* argv[]) {
 
         next_frame_target += FRAME_CYCLES;
 
+        jp.read_input();
         display.draw_frame();
 
         while(SDL_PollEvent(&e)) {
