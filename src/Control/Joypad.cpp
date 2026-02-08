@@ -59,7 +59,6 @@ void JoyPad::read_input() {
             data = Arithmetic::bit_clear(data, mapping.bit);
             if(Arithmetic::bit_check(old_data, mapping.bit)) {
                //falling edge
-               std::cout << "BUTTON PRESSED: " << print_button(mapping.key) << '\n';
                ic.request(Interrupt::JOYPAD);
             }
          } else {
