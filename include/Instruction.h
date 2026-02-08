@@ -9,28 +9,6 @@
 
 class CPU;
 
-class Instruction {
-public:
-    typedef std::function<void(CPU&)> MicroOp;
-
-    Instruction()   
-        :ops{} {}
-
-    Instruction(std::initializer_list<MicroOp> sub_ops)
-        {
-            len = std::min(ops.size(), sub_ops.size());
-            std::copy(sub_ops.begin(), sub_ops.begin() + len, ops.begin());
-        }
-
-    int length() const {return len;}
-    void execute_subop(CPU& cpu, int index) { ops[index](cpu); }
-private:
-    //each instruction is divided into atomic sub-operations
-    //that each take 1 cpu m-cycle
-    std::array<MicroOp, 6> ops; 
-    size_t len;
-};
-
 namespace Operation {
     namespace ALU {
         //primitive arithmetic and logic micro ops
@@ -46,92 +24,91 @@ namespace Operation {
         void xor_8(CPU& cpu, uint8_t num);
     }
 
-Instruction NOP();
-
 //------------------------ LOADS ------------------------//
 //8-bit
-Instruction LD_r_r(uint8_t& dest, const uint8_t& src);
-Instruction LD_r_n(uint8_t& dest);
-Instruction LD_r_m(uint8_t& dest, uint8_t& src_hi, uint8_t& src_lo);
-Instruction LD_m_r(uint8_t& dest_hi, uint8_t& dest_lo, uint8_t& src);
-Instruction LD_m_n(uint8_t& dest_hi, uint8_t& dest_lo);
-Instruction LD_A_a16();
-Instruction LD_a16_A();
-Instruction LDH_A_C();
-Instruction LDH_C_A();
-Instruction LDH_A_n();
-Instruction LDH_n_A();
-Instruction LD_A_HLdec();
-Instruction LD_HLdec_A();
-Instruction LD_A_HLinc();
-Instruction LD_HLinc_A();
+void NOP(CPU& cpu);
+void LD_r_r(CPU& cpu, uint8_t& dest, const uint8_t& src);
+void LD_r_n(CPU& cpu, uint8_t& dest);
+void LD_r_m(CPU& cpu, uint8_t& dest, uint8_t& src_hi, uint8_t& src_lo);
+void LD_m_r(CPU& cpu, uint8_t& dest_hi, uint8_t& dest_lo, uint8_t& src);
+void LD_m_n(CPU& cpu, uint8_t& dest_hi, uint8_t& dest_lo);
+void LD_A_a16(CPU& cpu);
+void LD_a16_A(CPU& cpu);
+void LDH_A_C(CPU& cpu);
+void LDH_C_A(CPU& cpu);
+void LDH_A_n(CPU& cpu);
+void LDH_n_A(CPU& cpu);
+void LD_A_HLdec(CPU& cpu);
+void LD_HLdec_A(CPU& cpu);
+void LD_A_HLinc(CPU& cpu);
+void LD_HLinc_A(CPU& cpu);
 //16-bit
-Instruction LD_rr_n16(uint8_t& dest_hi, uint8_t& dest_lo);
-Instruction LD_a16_SP();
-Instruction LD_SP_HL();
-Instruction LD_SP_n16();
-Instruction PUSH_rr(uint8_t& hi, uint8_t& lo);
-Instruction POP_rr(uint8_t& hi, uint8_t& lo);
-Instruction POP_AF();
-Instruction LD_HL_SPe();
+void LD_rr_n16(CPU& cpu, uint8_t& dest_hi, uint8_t& dest_lo);
+void LD_a16_SP(CPU& cpu);
+void LD_SP_HL(CPU& cpu);
+void LD_SP_n16(CPU& cpu);
+void PUSH_rr(CPU& cpu, uint8_t& hi, uint8_t& lo);
+void POP_rr(CPU& cpu, uint8_t& hi, uint8_t& lo);
+void POP_AF(CPU& cpu);
+void LD_HL_SPe(CPU& cpu);
 
 //------------------- ARITHMETIC -------------------//
 //8-bit
 using MathOp = void(*)(CPU& cpu, uint8_t reg);
-Instruction ALU_Inst_r(MathOp op, const uint8_t& reg);
-Instruction ALU_Inst_m(MathOp op);
-Instruction ALU_Inst_n(MathOp op);
-Instruction INC_r(uint8_t& reg);
-Instruction INC_m();
-Instruction INC_n();
-Instruction DEC_r(uint8_t& reg);
-Instruction DEC_m();
-Instruction DEC_n();
-Instruction CCF();
-Instruction SCF();
-Instruction DAA();
-Instruction CPL();
+void ALU_Inst_r(CPU& cpu, MathOp op, const uint8_t& reg);
+void ALU_Inst_m(CPU& cpu, MathOp op);
+void ALU_Inst_n(CPU& cpu, MathOp op);
+void INC_r(CPU& cpu, uint8_t& reg);
+void INC_m(CPU& cpu);
+void INC_n(CPU& cpu);
+void DEC_r(CPU& cpu, uint8_t& reg);
+void DEC_m(CPU& cpu);
+void DEC_n(CPU& cpu);
+void CCF(CPU& cpu);
+void SCF(CPU& cpu);
+void DAA(CPU& cpu);
+void CPL(CPU& cpu);
 //16-bit
-Instruction INC_rr(uint8_t& reg1, uint8_t& reg2);
-Instruction INC_SP();
-Instruction DEC_rr(uint8_t& reg1, uint8_t& reg2);
-Instruction DEC_SP();
-Instruction ADD_HL_rr(uint8_t& reg1, uint8_t& reg2);
-Instruction ADD_HL_SP();
-Instruction ADD_SPe();
+void INC_rr(CPU& cpu, uint8_t& reg1, uint8_t& reg2);
+void INC_SP(CPU& cpu);
+void DEC_rr(CPU& cpu, uint8_t& reg1, uint8_t& reg2);
+void DEC_SP(CPU& cpu);
+void ADD_HL_rr(CPU& cpu, uint8_t& reg1, uint8_t& reg2);
+void ADD_HL_SP(CPU& cpu);
+void ADD_SPe(CPU& cpu);
 
 //----------------------ROTATE, SHIFT, BIT----------------------//
 using RotFunc = uint8_t(*)(uint8_t num, bool& carry); //rot/shift function
-Instruction ROT_Inst_A(RotFunc func);
+void ROT_Inst_A(CPU& cpu, RotFunc func);
 //---------PREFIX ops---------//
-Instruction PREFIX();
-Instruction ROT_Inst_r(RotFunc func, uint8_t& reg);
-Instruction ROT_Inst_m(RotFunc func);
-Instruction BIT_r(uint8_t& reg, uint8_t bit);
-Instruction BIT_m(uint8_t bit);
-Instruction SWAP_r(uint8_t& reg);
-Instruction SWAP_m();
-Instruction SET_r(uint8_t& reg, uint8_t bit);
-Instruction SET_m(uint8_t bit);
-Instruction RES_r(uint8_t& reg, uint8_t bit);
-Instruction RES_m(uint8_t bit);
+void PREFIX(CPU& cpu);
+void ROT_Inst_r(CPU& cpu, RotFunc func, uint8_t& reg);
+void ROT_Inst_m(CPU& cpu, RotFunc func);
+void BIT_r(CPU& cpu, uint8_t& reg, uint8_t bit);
+void BIT_m(CPU& cpu, uint8_t bit);
+void SWAP_r(CPU& cpu, uint8_t& reg);
+void SWAP_m(CPU& cpu);
+void SET_r(CPU& cpu, uint8_t& reg, uint8_t bit);
+void SET_m(CPU& cpu, uint8_t bit);
+void RES_r(CPU& cpu, uint8_t& reg, uint8_t bit);
+void RES_m(CPU& cpu, uint8_t bit);
 
 //----------------------CONTROL FLOW--------------------//
 using ConditionCheck = bool(*)(const uint8_t& flags);
-Instruction JP(ConditionCheck cc);
-Instruction JPHL();
-Instruction JR(ConditionCheck cc);
-Instruction CALL(ConditionCheck cc);
-Instruction RET();
-Instruction RET_IF(ConditionCheck cc);
-Instruction RETI();
-Instruction RST(uint8_t addr);
-Instruction ISR(uint8_t addr);
+void JP(CPU& cpu, ConditionCheck cc);
+void JPHL(CPU& cpu);
+void JR(CPU& cpu, ConditionCheck cc);
+void CALL(CPU& cpu, ConditionCheck cc);
+void RET(CPU& cpu);
+void RET_IF(CPU& cpu, ConditionCheck cc);
+void RETI(CPU& cpu);
+void RST(CPU& cpu, uint8_t addr);
+void ISR(CPU& cpu, uint8_t addr);
 
 //--------------------------MISC------------------------//
-Instruction DI();
-Instruction EI();
-Instruction HALT();
+void DI(CPU& cpu);
+void EI(CPU& cpu);
+void HALT(CPU& cpu);
 }   //Operation
 
 #endif

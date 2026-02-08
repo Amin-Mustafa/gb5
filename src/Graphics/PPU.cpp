@@ -1,10 +1,11 @@
-#include "../../include/Graphics/PPU.h"
-#include "../../include/Memory/MMU.h"
-#include "../../include/Memory/InterruptController.h"
-#include "../../include/Memory/Spaces.h"
-#include "../../include/Graphics/LCD.h"
-#include "../../include/Graphics/Sprite.h"
-#include "../../include/Arithmetic.h"
+#include "Graphics/PPU.h"
+#include "Memory/MMU.h"
+#include "Memory/Bus.h"
+#include "Memory/InterruptController.h"
+#include "Memory/Spaces.h"
+#include "Graphics/LCD.h"
+#include "Graphics/Sprite.h"
+#include "Arithmetic.h"
 #include <iostream>
 #include <format>
 
@@ -29,7 +30,7 @@ uint8_t display_color(uint8_t palette, uint8_t px);
 uint8_t mix_pixel(uint8_t bg_px, SpritePixel spr_px, const PPURegs& regs);
 std::string ppu_state_to_str(PPU::State state);
 
-PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
+PPU::PPU(Bus& bus, MMU& mmu, InterruptController& interrupt_controller)
     :vram{mmu},
      oam{mmu},
      regs{mmu}, 
@@ -41,6 +42,7 @@ PPU::PPU(MMU& mmu, InterruptController& interrupt_controller)
      curr_state_enum{State::OAM_SCAN}
      {
         bg_fetcher.set_position(scanline_x, regs.ly);
+        bus.connect(*this);
      }
 
 void PPU::tick() {

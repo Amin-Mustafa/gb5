@@ -1,6 +1,7 @@
-#include "../include/Timer.h" 
-#include "../include/Memory/MMU.h"
-#include "../include/Memory/InterruptController.h"  
+#include "Timer.h" 
+#include "Memory/MMU.h"
+#include "Memory/InterruptController.h"  
+#include "Memory/Bus.h"
 #include <iostream>
 
 enum TimerAddress {
@@ -13,7 +14,7 @@ enum TimerAddress {
 constexpr unsigned long CLOCK_SPEED = 4194304;
 uint8_t frequency_bit(uint8_t control_reg);
 
-Timer::Timer(MMU& mmu, InterruptController& int_controller)
+Timer::Timer(Bus& bus, MMU& mmu, InterruptController& int_controller)
     :div{0x18},
      counter{0x00},
      modulo{0x00},
@@ -23,6 +24,7 @@ Timer::Timer(MMU& mmu, InterruptController& int_controller)
      ic{int_controller}
     {
         mmu.add_region(&region);
+        bus.connect(*this);
     }
     
 uint8_t Timer::ext_read(uint16_t addr) {

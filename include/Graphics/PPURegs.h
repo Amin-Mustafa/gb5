@@ -9,12 +9,11 @@ class MMU;
 
 class PPURegs {
 private:
-    MMU& mmu;
     MemoryRegion region;    //external memory mapping
     static constexpr uint16_t START = 0xFF40;
     static constexpr uint16_t END   = 0xFF4B;
 public:
-    PPURegs(MMU&);
+    PPURegs(MMU& mmu);
     uint8_t lcdc, stat, scy, scx, ly, lyc, dma, bgp, obp_0, obp_1, wy, wx;
 
     uint8_t ext_read(uint16_t addr);

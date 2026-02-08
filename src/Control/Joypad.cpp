@@ -1,8 +1,9 @@
-#include "../include/Control/JoyPad.h"
-#include "../include/Memory/MMU.h" 
-#include "../include/Memory/InterruptController.h"
-#include "../include/Control/InputHandler.h"  
-#include "../include/Arithmetic.h"
+#include "Control/JoyPad.h"
+#include "Memory/MMU.h" 
+#include "Memory/Bus.h"
+#include "Memory/InterruptController.h"
+#include "Control/InputHandler.h"  
+#include "Arithmetic.h"
 #include <iostream>
 
 constexpr uint8_t RIGHT_BIT = 0;
@@ -16,12 +17,13 @@ constexpr uint8_t START_BIT = 3;
 
 std::string print_button(InputHandler::Mapping key);
 
-JoyPad::JoyPad(MMU& mmu, InterruptController& int_controller)
+JoyPad::JoyPad(Bus& bus, MMU& mmu, InterruptController& int_controller)
     :data{0xCF},
      region{this, ADDRESS, ADDRESS},
      ic{int_controller} 
      {
         mmu.add_region(&region);
+        bus.connect(*this);
      }
     
 
@@ -59,6 +61,7 @@ void JoyPad::read_input() {
             data = Arithmetic::bit_clear(data, mapping.bit);
             if(Arithmetic::bit_check(old_data, mapping.bit)) {
                //falling edge
+               //std::cout << "BUTTON PRESSED: " << print_button(mapping.key) << '\n';
                ic.request(Interrupt::JOYPAD);
             }
          } else {

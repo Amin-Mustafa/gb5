@@ -100,721 +100,453 @@ namespace Operation {
             cpu.F = flag_state(cpu.A == 0, 0, 0, 0);
         }
         void decimal_adjust(CPU& cpu) {
-            bool c_flag = cpu.get_flag(Flag::CARRY);
-            bool h_flag = cpu.get_flag(Flag::HALF_CARRY);
-            bool n_flag = cpu.get_flag(Flag::NEGATIVE);
-            //after addition adjust if upper or lower nybble of A
-            //out of BCD bounds
-            if(!n_flag) {
-                //...upper nybble
-                if(c_flag || cpu.A > 0x99) {
-                    cpu.A += 0x60;
-                    c_flag = 1;
-                }
-                //...lower nybble
-                if(h_flag || (cpu.A & 0x0f) > 0x09) {
-                    cpu.A += 0x06;
-                }
-            }
-            //after a subtraction, only adjust if lower nybble out of bounds
-            else {
-                if(c_flag) cpu.A -= 0x60;
-                if(h_flag) cpu.A -= 0x06;
-            }
+            uint8_t correction = 0;
+            bool n = cpu.get_flag(Flag::NEGATIVE);
+            bool h = cpu.get_flag(Flag::HALF_CARRY);
+            bool c = cpu.get_flag(Flag::CARRY);
 
-            //update flag state
-            cpu.F = flag_state(cpu.A == 0, n_flag, 0, c_flag);
+            if (h || (!n && (cpu.A & 0x0F) > 9)) {
+                correction |= 0x06;
+            }
+            if (c || (!n && cpu.A > 0x99)) {
+                correction |= 0x60;
+                c = true;
+            }
+            if (n) {
+                cpu.A -= correction; 
+            } else {
+                cpu.A += correction; 
+            }
+            cpu.set_flag(Flag::ZERO, cpu.A == 0);
+            cpu.set_flag(Flag::HALF_CARRY, false); //h always cleared
+            cpu.set_flag(Flag::CARRY, c);          //c updated
         }
     } //ALU
 
-Instruction NOP() {
-    return Instruction {
-        [](CPU&){}
-    };  //do nothing
-}
-
+void NOP(CPU& cpu) {}
 //----------------------LOADS-----------------------//
 //------8-bit------//
-Instruction LD_r_r(uint8_t& dest, const uint8_t& src) {
-    return Instruction { 
-        [&dest, &src](CPU&){ dest = src;}
-    };
+void LD_r_r(CPU& cpu, uint8_t& dest, const uint8_t& src) {
+    dest = src;
 }
-Instruction LD_r_n(uint8_t& dest) {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},        //M1
-        [&dest](CPU& cpu) {dest = cpu.latch.Z;}                //M2
-    };
+void LD_r_n(CPU& cpu, uint8_t& dest) {
+    uint8_t src = cpu.fetch_byte();
+    dest = src;
 }
-Instruction LD_r_m(uint8_t& dest, uint8_t& src_hi, uint8_t& src_lo) {
-    return Instruction {
-        [&src_hi, &src_lo](CPU& cpu) {
-            cpu.latch.Z = cpu.read_memory(pair(src_hi, src_lo));
-        },    //M1
-        [&dest](CPU& cpu) {dest = cpu.latch.Z;}            //M2
-    };
+void LD_r_m(CPU& cpu, uint8_t& dest, uint8_t& src_hi, uint8_t& src_lo) {
+    uint8_t src = cpu.read_memory(pair(src_hi, src_lo));
+    dest = src;
 }
-Instruction LD_m_r(uint8_t& dest_hi, uint8_t& dest_lo, uint8_t& src) {
-    return Instruction {
-        [&dest_hi, &dest_lo, &src](CPU& cpu) {
-            cpu.write_memory(pair(dest_hi, dest_lo), src);
-        },      //M1
-        [](CPU& cpu) {/* dummy */}                     //M2
-    };
+void LD_m_r(CPU& cpu, uint8_t& dest_hi, uint8_t& dest_lo, uint8_t& src) {
+    cpu.write_memory(pair(dest_hi, dest_lo), src);
 }
-Instruction LD_m_n(uint8_t& dest_hi, uint8_t& dest_lo) {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [&dest_hi, &dest_lo](CPU& cpu) {
-            cpu.write_memory(pair(dest_hi, dest_lo), cpu.latch.Z);
-        },
-        [](CPU&){}
-    };
+void LD_m_n(CPU& cpu, uint8_t& dest_hi, uint8_t& dest_lo) {
+        uint8_t src = cpu.fetch_byte();
+        cpu.write_memory(pair(dest_hi, dest_lo), src);
 }
-Instruction LD_A_a16() {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},  //M1: read lsb of addr
-        [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(cpu.latch.combined());},
-        [](CPU& cpu) {cpu.A = cpu.latch.Z;}
-    };
+void LD_A_a16(CPU& cpu) {
+    uint8_t lo = cpu.fetch_byte();
+    uint8_t hi = cpu.fetch_byte();
+    uint8_t src = cpu.read_memory(pair(hi, lo));
+    cpu.A = src;
 }
-Instruction LD_a16_A() {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.write_memory(cpu.latch.combined(), cpu.A);},
-        [](CPU& cpu) {}
-    };
+void LD_a16_A(CPU& cpu) {
+    uint8_t lo = cpu.fetch_byte();
+    uint8_t hi = cpu.fetch_byte();
+    cpu.write_memory(pair(hi, lo), cpu.A);
 }
-Instruction LDH_A_C() {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(0xFF00 + cpu.C);},
-        [](CPU& cpu) {cpu.A = cpu.latch.Z;}
-    };
+void LDH_A_C(CPU& cpu) {
+    uint8_t src = cpu.read_memory(pair(0xFF, cpu.C));
+    cpu.A = src;
 }
-Instruction LDH_C_A(){
-    return Instruction {
-        [](CPU& cpu) {cpu.write_memory(0xFF00 + cpu.C, cpu.A);},
-        [](CPU& cpu) {}
-    };
+void LDH_C_A(CPU& cpu){
+    cpu.write_memory(pair(0xFF, cpu.C), cpu.A);
 }
-Instruction LDH_A_n(){
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(0xFF00 + cpu.latch.Z);},
-        [](CPU& cpu) {cpu.A = cpu.latch.Z;}
-    };
+void LDH_A_n(CPU& cpu){
+    uint8_t lo = cpu.fetch_byte();
+    uint8_t src = cpu.read_memory(pair(0xFF, lo));
+    cpu.A = src;
 }
-Instruction LDH_n_A(){
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.write_memory(0xFF00 + cpu.latch.Z, cpu.A);},
-        [](CPU& cpu) {}
-    };
+void LDH_n_A(CPU& cpu){
+    uint8_t lo = cpu.fetch_byte();
+    cpu.write_memory(pair(0xFF, lo), cpu.A);
 }
-Instruction LD_A_HLdec() {
-    return Instruction {
-        [](CPU& cpu) {
-            Pair HL{cpu.H, cpu.L};
-            cpu.latch.Z = cpu.read_memory(HL.get());
-            HL.set(HL.get()-1);
-        },
-        [](CPU& cpu) {cpu.A = cpu.latch.Z;}
-    };
+void LD_A_HLdec(CPU& cpu) {
+    Pair hl{cpu.H, cpu.L};
+    uint8_t src = cpu.read_memory(hl.get());
+    hl.set(hl.get()-1);
+    cpu.A = src;
 }
-Instruction LD_HLdec_A() {
-    return Instruction {
-        [](CPU& cpu) {
-            Pair HL{cpu.H, cpu.L};
-            cpu.write_memory(HL.get(), cpu.A);
-            HL.set(HL.get() - 1);
-        },
-        [](CPU& cpu) {}
-    };
+void LD_HLdec_A(CPU& cpu) {
+    Pair hl{cpu.H, cpu.L};
+    cpu.write_memory(hl.get(), cpu.A);
+    hl.set(hl.get()-1);
 }
-Instruction LD_A_HLinc() {
-    return Instruction {
-        [](CPU& cpu) {
-            Pair HL{cpu.H, cpu.L};
-            cpu.latch.Z = cpu.read_memory(HL.get());
-            HL.set(HL.get()+1);
-        },
-        [](CPU& cpu) {cpu.A = cpu.latch.Z;}
-    };
+void LD_A_HLinc(CPU& cpu) {
+    Pair HL{cpu.H, cpu.L};
+    uint8_t src = cpu.read_memory(HL.get());
+    HL.set(HL.get()+1);
+    cpu.A = src;
 }
-Instruction LD_HLinc_A() {
-    return Instruction {
-        [](CPU& cpu) {
-            Pair HL{cpu.H, cpu.L};
-            cpu.write_memory(HL.get(), cpu.A);
-            HL.set(HL.get() + 1);
-        },
-        [](CPU& cpu) {}
-    };
+void LD_HLinc_A(CPU& cpu) {
+    Pair HL{cpu.H, cpu.L};
+    cpu.write_memory(HL.get(), cpu.A);
+    HL.set(HL.get() + 1);
 }
 
 //--------16-bit--------//
-Instruction LD_rr_n16(uint8_t& dest_hi, uint8_t& dest_lo) {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
-        [&dest_hi, &dest_lo](CPU& cpu) {
-            dest_hi = cpu.latch.W;
-            dest_lo = cpu.latch.Z;
-        }
-    };
+void LD_rr_n16(CPU& cpu, uint8_t& dest_hi, uint8_t& dest_lo) {
+    uint8_t lo = cpu.fetch_byte();
+    uint8_t hi = cpu.fetch_byte();
+
+    dest_hi = hi;
+    dest_lo = lo;
 }
-Instruction LD_a16_SP() {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
-        [](CPU& cpu) {
-            uint16_t addr = cpu.latch.combined();
-            cpu.write_memory(addr, cpu.sp & 0xFF);
-            cpu.latch.set(addr + 1);
-        },
-        [](CPU& cpu) {
-            cpu.write_memory(cpu.latch.combined(), cpu.sp >> 8);
-        },
-        [](CPU& cpu) {}
-    };
+void LD_a16_SP(CPU& cpu) {
+    uint8_t lo = cpu.fetch_byte();
+    uint8_t hi = cpu.fetch_byte();
+    Pair addr{hi, lo};
+    cpu.write_memory(addr.get(), cpu.sp & 0xFF);
+    addr.set(addr.get() + 1);
+    cpu.write_memory(addr.get(), cpu.sp >> 8);
+
 }
-Instruction LD_SP_HL() {
-    return Instruction {
-        [](CPU& cpu) {cpu.sp = pair(cpu.H, cpu.L);},
-        [](CPU& cpu) {}
-    };
+void LD_SP_HL(CPU& cpu) {
+    uint16_t addr = pair(cpu.H, cpu.L);
+    cpu.sp = addr;
+    cpu.idle_m_cycle();
 }
-Instruction LD_SP_n16() {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.latch.W = cpu.fetch_byte();},
-        [](CPU& cpu) {cpu.sp = cpu.latch.combined(); }
-    };
+void LD_SP_n16(CPU& cpu) {
+    uint8_t lo = cpu.fetch_byte();
+    uint8_t hi = cpu.fetch_byte();
+    cpu.sp = pair(hi, lo);
 }
-Instruction PUSH_rr(uint8_t& hi, uint8_t& lo) {
-    return Instruction {
-        [](CPU& cpu) {cpu.sp--;},
-        [&hi](CPU& cpu) { 
-            cpu.write_memory(cpu.sp, hi); 
-            cpu.sp--;
-        },
-        [&lo](CPU& cpu) {
-            cpu.write_memory(cpu.sp, lo);
-        },
-        [](CPU&) {}
-    };
+void PUSH_rr(CPU& cpu, uint8_t& hi, uint8_t& lo) {
+    cpu.sp--;
+    cpu.write_memory(cpu.sp, hi);
+    cpu.sp--;
+    cpu.write_memory(cpu.sp, lo);
+
+    cpu.idle_m_cycle();
 }
-Instruction POP_rr(uint8_t& hi, uint8_t& lo) {
-    return Instruction {
-        [](CPU& cpu) {
-            cpu.latch.Z = cpu.read_memory(cpu.sp);
-            cpu.sp++;
-        },
-        [](CPU& cpu) {
-            cpu.latch.W = cpu.read_memory(cpu.sp);
-            cpu.sp++;
-        },
-        [&hi, &lo](CPU& cpu) {
-            hi = cpu.latch.W;
-            lo = cpu.latch.Z;
-        }
-    };
+void POP_rr(CPU& cpu, uint8_t& hi, uint8_t& lo) {
+    lo = cpu.read_memory(cpu.sp);
+    cpu.sp++;
+    hi = cpu.read_memory(cpu.sp);
+    cpu.sp++;
 }
 
-Instruction POP_AF() {
-    return Instruction {
-        [](CPU& cpu) {
-            cpu.latch.Z = cpu.read_memory(cpu.sp);
-            cpu.sp++;
-        },
-        [](CPU& cpu) {
-            cpu.latch.W = cpu.read_memory(cpu.sp);
-            cpu.sp++;
-        },
-        [](CPU& cpu) {
-            cpu.A = cpu.latch.W;
-            cpu.F = cpu.latch.Z & 0xF0;
-        }
-    };
+void POP_AF(CPU& cpu) {
+    cpu.F = cpu.read_memory(cpu.sp) & 0xF0;
+    cpu.sp++;
+    cpu.A = cpu.read_memory(cpu.sp);
+    cpu.sp++;
 }
 
-Instruction LD_HL_SPe() {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [](CPU& cpu) {},
-        [](CPU& cpu) {
-            bool half_carry = ((cpu.sp & 0xF) + (cpu.latch.Z & 0xF)) > 0xF;
-            bool carry = ((cpu.sp & 0xFF) + cpu.latch.Z) > 0xFF;
-            uint16_t result = cpu.sp + static_cast<int8_t>(cpu.latch.Z);
+void LD_HL_SPe(CPU& cpu) {
+    uint8_t offset = cpu.fetch_byte();
+    cpu.idle_m_cycle(); //dummy cycle
+    bool half_carry = ((cpu.sp & 0xF) + (offset & 0xF)) > 0xF;
+    bool carry = ((cpu.sp & 0xFF) + offset) > 0xFF;
+    uint16_t result = cpu.sp + static_cast<int8_t>(offset);
 
-            cpu.set_flag(Flag::ZERO, 0);
-            cpu.set_flag(Flag::NEGATIVE, 0);
-            cpu.set_flag(Flag::HALF_CARRY, half_carry);
-            cpu.set_flag(Flag::CARRY, carry);
-            
-            cpu.H = result >> 8;
-            cpu.L = result & 0xff;
-        }
-    };
+    cpu.set_flag(Flag::ZERO, 0);
+    cpu.set_flag(Flag::NEGATIVE, 0);
+    cpu.set_flag(Flag::HALF_CARRY, half_carry);
+    cpu.set_flag(Flag::CARRY, carry);
+    
+    cpu.H = result >> 8;
+    cpu.L = result & 0xff;
 }
 
 //------------------- ARITHMETIC and LOGIC -------------------//
 //generic 8-bit ALU op
-Instruction ALU_Inst_r(MathOp op, const uint8_t& reg) {
-    return Instruction {
-        [op, &reg](CPU& cpu) { op(cpu, reg); }
-    };
+void ALU_Inst_r(CPU& cpu, MathOp op, const uint8_t& reg) {
+    op(cpu, reg);
 }
-Instruction ALU_Inst_m(MathOp op) {
-    return Instruction { 
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [op](CPU& cpu) {op(cpu, cpu.latch.Z);}
-    };
+void ALU_Inst_m(CPU& cpu, MathOp op) {
+    uint8_t arg = cpu.read_memory(pair(cpu.H, cpu.L));
+    op(cpu, arg);
 }
-Instruction ALU_Inst_n(MathOp op) {
-    return Instruction { 
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [op](CPU& cpu) {op(cpu, cpu.latch.Z);}
-    };
+void ALU_Inst_n(CPU& cpu, MathOp op) {
+    uint8_t arg = cpu.fetch_byte();
+    op(cpu, arg);
 }
 
-Instruction INC_r(uint8_t& reg) {
-    return Instruction { 
-        [&reg](CPU& cpu) {ALU::inc_8(cpu, reg); }
-    };
+void INC_r(CPU& cpu, uint8_t& reg) {
+    ALU::inc_8(cpu, reg);
 }
-Instruction INC_m() {
-    return Instruction { 
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [](CPU& cpu) {
-            ALU::inc_8(cpu, cpu.latch.Z);
-            cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);
-        },
-        [](CPU& cpu) {}
-    };
+void INC_m(CPU& cpu) {
+    uint8_t arg = cpu.read_memory(pair(cpu.H, cpu.L));
+    ALU::inc_8(cpu, arg);
+    cpu.write_memory(pair(cpu.H, cpu.L), arg);
 }
-Instruction DEC_r(uint8_t& reg) {
-    return Instruction { 
-        [&reg](CPU& cpu) {ALU::dec_8(cpu, reg); }
-    };
+void DEC_r(CPU& cpu, uint8_t& reg) {
+    ALU::dec_8(cpu, reg);
 }
-Instruction DEC_m() {
-    return Instruction { 
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [](CPU& cpu) {
-            ALU::dec_8(cpu, cpu.latch.Z);
-            cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);
-        },
-        [](CPU& cpu) {}
-    };
+void DEC_m(CPU& cpu) {
+    uint8_t arg = cpu.read_memory(pair(cpu.H, cpu.L));
+    ALU::dec_8(cpu, arg);
+    cpu.write_memory(pair(cpu.H, cpu.L), arg);
 }
-Instruction CCF() {
-    return Instruction {
-        [](CPU& cpu) {
-            cpu.set_flag(Flag::CARRY, !cpu.get_flag(Flag::CARRY));
-            cpu.set_flag(Flag::NEGATIVE, 0);
-            cpu.set_flag(Flag::HALF_CARRY, 0);
-        }
-    };
+void CCF(CPU& cpu) {
+    cpu.set_flag(Flag::CARRY, !cpu.get_flag(Flag::CARRY));
+    cpu.set_flag(Flag::NEGATIVE, 0);
+    cpu.set_flag(Flag::HALF_CARRY, 0);
 }
 
-Instruction SCF() {
-    return Instruction {
-        [](CPU& cpu) {
-            cpu.set_flag(Flag::CARRY, 1);
-            cpu.set_flag(Flag::NEGATIVE, 0);
-            cpu.set_flag(Flag::HALF_CARRY, 0);
-        }
-    };
+void SCF(CPU& cpu) {
+    cpu.set_flag(Flag::CARRY, 1);
+    cpu.set_flag(Flag::NEGATIVE, 0);
+    cpu.set_flag(Flag::HALF_CARRY, 0);
 }
 
-Instruction DAA() {
-    return Instruction{
-        [](CPU& cpu) {ALU::decimal_adjust(cpu);}
-    };
+void DAA(CPU& cpu) {
+    ALU::decimal_adjust(cpu);
 }
 
-Instruction CPL() {
-    return Instruction {
-        [](CPU& cpu) {
-            cpu.A = ~cpu.A;
-            cpu.set_flag(Flag::NEGATIVE, 1);
-            cpu.set_flag(Flag::HALF_CARRY, 1);
-        }
-    };
+void CPL(CPU& cpu) {
+    cpu.A = ~cpu.A;
+    cpu.set_flag(Flag::NEGATIVE, 1);
+    cpu.set_flag(Flag::HALF_CARRY, 1);
 }
 
 //--------16-bit--------//
-Instruction INC_rr(uint8_t& reg1, uint8_t& reg2) {
-    return Instruction {
-        [&reg1, &reg2](CPU&) { 
-            Pair pair{reg1, reg2};
-            pair.set(pair.get() + 1);
-        },
-        [](CPU&) {}
-    };
+void INC_rr(CPU& cpu, uint8_t& reg1, uint8_t& reg2) {
+    Pair pair{reg1, reg2};
+    pair.set(pair.get() + 1);
+    cpu.idle_m_cycle();
 }
-Instruction INC_SP() { 
-    return Instruction {
-        [](CPU& cpu) {cpu.sp++;},
-        [](CPU& cpu) {}
-    };
+void INC_SP(CPU& cpu) { 
+    cpu.sp++;
+    cpu.idle_m_cycle();
 }
-Instruction DEC_rr(uint8_t& reg1, uint8_t& reg2) {
-    return Instruction {
-        [&reg1, &reg2](CPU&) { 
-            Pair pair{reg1, reg2};
-            pair.set(pair.get() - 1);
-        },
-        [](CPU&) {}
-    };
+void DEC_rr(CPU& cpu, uint8_t& reg1, uint8_t& reg2) {
+    Pair pair{reg1, reg2};
+    pair.set(pair.get() - 1);
+    cpu.idle_m_cycle();
 }
-Instruction DEC_SP() { 
-    return Instruction {
-        [](CPU& cpu) {cpu.sp--;},
-        [](CPU& cpu) {}
-    };
+void DEC_SP(CPU& cpu) { 
+    cpu.sp--;
+    cpu.idle_m_cycle();
 }
-Instruction ADD_HL_rr(uint8_t& reg1, uint8_t& reg2) {
-    return Instruction{
-        [&reg2](CPU& cpu) {
-            uint16_t L_added = cpu.L + reg2;
-            cpu.set_flag(Flag::NEGATIVE, 0);
-            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.L, reg2));
-            cpu.set_flag(Flag::CARRY, L_added > 0xff);
-            cpu.L = L_added & 0xff;
-        },
-        [&reg1](CPU& cpu) {
-            bool carry = cpu.get_flag(Flag::CARRY);
-            uint16_t H_added = cpu.H + reg1 + carry;
-            cpu.set_flag(Flag::NEGATIVE, 0);
-            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.H, reg1, carry));
-            cpu.set_flag(Flag::CARRY, H_added > 0xff);
-            cpu.H = H_added;
-        }
-    };
-}
-Instruction ADD_HL_SP() {
-    return Instruction{
-        [](CPU& cpu) {
-            uint8_t lo = cpu.sp & 0xff;
-            uint16_t L_added = cpu.L + lo;
-            cpu.set_flag(Flag::NEGATIVE, 0);
-            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.L, lo));
-            cpu.set_flag(Flag::CARRY, L_added > 0xff);
-            cpu.L = L_added & 0xff;
-        },
-        [](CPU& cpu) {
-            uint8_t hi = cpu.sp >> 8;
-            bool carry = cpu.get_flag(Flag::CARRY);
-            uint16_t H_added = cpu.H + hi + carry;
-            cpu.set_flag(Flag::NEGATIVE, 0);
-            cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.H, hi, carry));
-            cpu.set_flag(Flag::CARRY, H_added > 0xff);
-            cpu.H = H_added;
-        }
-    };
-}
-Instruction ADD_SPe() {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [](CPU& cpu) {},
-        [](CPU& cpu) {
-            bool half_carry = ((cpu.sp & 0xF) + (cpu.latch.Z & 0xF)) > 0xF;
-            bool carry = ((cpu.sp & 0xFF) + cpu.latch.Z) > 0xFF;
-            uint16_t result = cpu.sp + static_cast<int8_t>(cpu.latch.Z);
+void ADD_HL_rr(CPU& cpu, uint8_t& reg1, uint8_t& reg2) {
+    uint16_t L_addend = cpu.L + reg2;
+    cpu.set_flag(Flag::NEGATIVE, 0);
+    cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.L, reg2));
+    cpu.set_flag(Flag::CARRY, L_addend > 0xff);
+    cpu.L = L_addend & 0xff;
 
-            cpu.set_flag(Flag::ZERO, 0);
-            cpu.set_flag(Flag::NEGATIVE, 0);
-            cpu.set_flag(Flag::HALF_CARRY, half_carry);
-            cpu.set_flag(Flag::CARRY, carry);
-            
-            cpu.latch.set(result);
-        },
-        [](CPU& cpu) {cpu.sp = cpu.latch.combined();}
-    };
+    bool carry = cpu.get_flag(Flag::CARRY);
+    uint16_t H_addend = cpu.H + reg1 + carry;
+    cpu.set_flag(Flag::NEGATIVE, 0);
+    cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.H, reg1, carry));
+    cpu.set_flag(Flag::CARRY, H_addend > 0xff);
+    cpu.H = H_addend;
+
+    cpu.idle_m_cycle();
+}
+void ADD_HL_SP(CPU& cpu) {
+    uint8_t lo = cpu.sp & 0xff;
+    uint16_t L_addend = cpu.L + lo;
+
+    cpu.set_flag(Flag::NEGATIVE, 0);
+    cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.L, lo));
+    cpu.set_flag(Flag::CARRY, L_addend > 0xff);
+    cpu.L = L_addend & 0xff;
+    uint8_t hi = cpu.sp >> 8;
+
+    bool carry = cpu.get_flag(Flag::CARRY);
+    uint16_t H_addend = cpu.H + hi + carry;
+    cpu.set_flag(Flag::NEGATIVE, 0);
+    cpu.set_flag(Flag::HALF_CARRY, Arithmetic::half_carry_add_8(cpu.H, hi, carry));
+    cpu.set_flag(Flag::CARRY, H_addend > 0xff);
+    cpu.H = H_addend;
+
+    cpu.idle_m_cycle();
+}
+void ADD_SPe(CPU& cpu) {
+    uint8_t offset = cpu.fetch_byte();
+
+    cpu.idle_m_cycle();
+
+    bool half_carry = ((cpu.sp & 0xF) + (offset & 0xF)) > 0xF;
+    bool carry = ((cpu.sp & 0xFF) + offset) > 0xFF;
+    uint16_t result = cpu.sp + static_cast<int8_t>(offset);
+
+    cpu.set_flag(Flag::ZERO, 0);
+    cpu.set_flag(Flag::NEGATIVE, 0);
+    cpu.set_flag(Flag::HALF_CARRY, half_carry);
+    cpu.set_flag(Flag::CARRY, carry);
+
+    cpu.sp = result;
+    cpu.idle_m_cycle();
 }
 
 //----------------------ROTATE, SHIFT, BIT----------------------//
 using RotFunc = uint8_t(*)(uint8_t num, bool& carry); //rot/shift function
 //-------Accumulator-------//
-Instruction ROT_Inst_A(RotFunc func) {
-    return Instruction {
-        [func](CPU& cpu) {
-            bool carry = cpu.get_flag(Flag::CARRY);
-            cpu.A = func(cpu.A, carry);
-            cpu.F = flag_state(0, 0, 0, carry);
-        }
-    };
+void ROT_Inst_A(CPU& cpu, RotFunc func) {
+    bool carry = cpu.get_flag(Flag::CARRY);
+    cpu.A = func(cpu.A, carry);
+    cpu.F = flag_state(0, 0, 0, carry);
 }
 //-------PREFIX ops--------//
-Instruction PREFIX() {
-    return {
-        [](CPU& cpu) {
-            cpu.prefix_mode();
-        }
-    };
+void PREFIX(CPU& cpu) {
+    cpu.prefix_mode();
 }
-Instruction ROT_Inst_r(RotFunc func, uint8_t& reg) {   
-    return {
-        [func, &reg](CPU& cpu) {
-            bool carry = cpu.get_flag(Flag::CARRY);
-            reg = func(reg, carry);
-            cpu.F = flag_state(!reg, 0, 0, carry);
-        }
-    };
+void ROT_Inst_r(CPU& cpu, RotFunc func, uint8_t& reg) {   
+    bool carry = cpu.get_flag(Flag::CARRY);
+    reg = func(reg, carry);
+    cpu.F = flag_state(!reg, 0, 0, carry);
 }
-Instruction ROT_Inst_m(RotFunc func) {
-    return {
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [func](CPU& cpu) {
-            bool carry = cpu.get_flag(Flag::CARRY);
-            uint8_t result = func(cpu.latch.Z, carry);
-            cpu.write_memory(pair(cpu.H, cpu.L), result);
-            cpu.F = flag_state(!result, 0, 0, carry);
-        },
-        [](CPU& cpu) {}
-    };
+void ROT_Inst_m(CPU& cpu, RotFunc func) {
+    uint8_t arg = cpu.read_memory(pair(cpu.H, cpu.L));
+    bool carry = cpu.get_flag(Flag::CARRY);
+    uint8_t result = func(arg, carry);
+    cpu.write_memory(pair(cpu.H, cpu.L), result);
+    cpu.F = flag_state(!result, 0, 0, carry);
 }
 
-Instruction BIT_r(uint8_t& reg, uint8_t bit) {
-    return {
-        [&reg, bit](CPU& cpu) {
-            bool bit_is_set = Arithmetic::bit_check(reg, bit);
-            cpu.set_flag(Flag::ZERO, !bit_is_set);
-            cpu.set_flag(Flag::NEGATIVE, 0);
-            cpu.set_flag(Flag::HALF_CARRY, 1);
-        }
-    };
+void BIT_r(CPU& cpu, uint8_t& reg, uint8_t bit) {
+     bool bit_is_set = Arithmetic::bit_check(reg, bit);
+    cpu.set_flag(Flag::ZERO, !bit_is_set);
+    cpu.set_flag(Flag::NEGATIVE, 0);
+    cpu.set_flag(Flag::HALF_CARRY, 1);
 }
-Instruction BIT_m(uint8_t bit) {
-    return {
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [bit](CPU& cpu) {
-            bool bit_is_set = Arithmetic::bit_check(cpu.latch.Z, bit);
-            cpu.set_flag(Flag::ZERO, !bit_is_set);
-            cpu.set_flag(Flag::NEGATIVE, 0);
-            cpu.set_flag(Flag::HALF_CARRY, 1);
-        }
-    };
+void BIT_m(CPU& cpu, uint8_t bit) {
+    uint8_t arg = cpu.read_memory(pair(cpu.H, cpu.L));
+    bool bit_is_set = Arithmetic::bit_check(arg, bit);
+    cpu.set_flag(Flag::ZERO, !bit_is_set);
+    cpu.set_flag(Flag::NEGATIVE, 0);
+    cpu.set_flag(Flag::HALF_CARRY, 1);
 }
-Instruction SWAP_r(uint8_t& reg) {
-    return {
-        [&reg](CPU& cpu){
-            reg = Arithmetic::swap_nibs(reg);
-            cpu.F = flag_state(reg == 0, 0, 0, 0);
-        }
-    };
+void SWAP_r(CPU& cpu, uint8_t& reg) {
+    reg = Arithmetic::swap_nibs(reg);
+    cpu.F = flag_state(reg == 0, 0, 0, 0);
 }
-Instruction SWAP_m() {
-    return {
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [](CPU& cpu){
-            cpu.latch.Z = Arithmetic::swap_nibs(cpu.latch.Z);
-            cpu.F = flag_state(cpu.latch.Z == 0, 0, 0, 0);
-            cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);
-        },
-        [](CPU& cpu) {}
-    };
+void SWAP_m(CPU& cpu) {
+    uint8_t arg = cpu.read_memory(pair(cpu.H, cpu.L));
+    arg = Arithmetic::swap_nibs(arg);
+    cpu.F = flag_state(arg == 0, 0, 0, 0);
+    cpu.write_memory(pair(cpu.H, cpu.L), arg);
 }
-Instruction SET_r(uint8_t& reg, uint8_t bit) {
-    return {
-        [&reg, bit](CPU& cpu) {reg = Arithmetic::bit_set(reg, bit);}
-    };
+void SET_r(CPU& cpu, uint8_t& reg, uint8_t bit) {   
+    reg = Arithmetic::bit_set(reg, bit);
 }
-Instruction SET_m(uint8_t bit) {
-    return {
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [bit](CPU& cpu) {
-            cpu.latch.Z = Arithmetic::bit_set(cpu.latch.Z, bit);
-            cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);
-        },
-        [](CPU& cpu) {}
-    };
+void SET_m(CPU& cpu, uint8_t bit) {
+    uint8_t arg = cpu.read_memory(pair(cpu.H, cpu.L));
+    arg = Arithmetic::bit_set(arg, bit);
+    cpu.write_memory(pair(cpu.H, cpu.L), arg);
 }
 
-Instruction RES_r(uint8_t& reg, uint8_t bit) {
-    return {
-        [&reg, bit](CPU& cpu) {reg = Arithmetic::bit_clear(reg, bit);}
-    };
+void RES_r(CPU& cpu, uint8_t& reg, uint8_t bit) {
+    reg = Arithmetic::bit_clear(reg, bit);
 }
 
-Instruction RES_m(uint8_t bit) {
-    return {
-        [](CPU& cpu) {cpu.latch.Z = cpu.read_memory(pair(cpu.H, cpu.L));},
-        [bit](CPU& cpu) {
-            cpu.latch.Z = Arithmetic::bit_clear(cpu.latch.Z, bit);
-            cpu.write_memory(pair(cpu.H, cpu.L), cpu.latch.Z);
-        },
-        [](CPU& cpu) {}
-    };
+void RES_m(CPU& cpu, uint8_t bit) {
+    uint8_t arg = cpu.read_memory(pair(cpu.H, cpu.L));
+    arg = Arithmetic::bit_clear(arg, bit);
+    cpu.write_memory(pair(cpu.H, cpu.L), arg);
 }
 
 //----------------------CONTROL FLOW--------------------//
 using ConditionCheck = bool(*)(const uint8_t& flags);
-Instruction JP(ConditionCheck cc) {
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [cc](CPU& cpu) {
-            cpu.latch.W = cpu.fetch_byte();
-            if(!cc(cpu.F)) cpu.skip_inst();
-        },
-        [](CPU& cpu) {cpu.pc = cpu.latch.combined() - 1;},
-        [](CPU& cpu) {}
-    };
+void JP(CPU& cpu, ConditionCheck cc) {
+    uint8_t addr_lo = cpu.fetch_byte();
+    uint8_t addr_hi = cpu.fetch_byte();
+
+    if(!cc(cpu.F)) {
+        return;
+    }
+
+    cpu.pc = pair(addr_hi, addr_lo);
+    cpu.idle_m_cycle();
 }
-Instruction JPHL(){
-    return Instruction{
-        [](CPU& cpu) {cpu.pc = pair(cpu.H, cpu.L) - 1;}
-    };
+void JPHL(CPU& cpu){
+    cpu.pc = pair(cpu.H, cpu.L);
 }
-Instruction JR(ConditionCheck cc) {
-    return Instruction {
-        [cc](CPU& cpu) {
-            cpu.latch.Z = cpu.fetch_byte();
-            if(!cc(cpu.F)) cpu.skip_inst();
-        },
-        [](CPU& cpu) {
-            int8_t offset = static_cast<int8_t>(cpu.latch.Z);
-            cpu.latch.set(cpu.pc + offset);
-            cpu.pc = cpu.latch.combined();
-        },
-        [](CPU& cpu) {}
-    };
+void JR(CPU& cpu, ConditionCheck cc) {
+    uint8_t byte = cpu.fetch_byte();
+
+    if(!cc(cpu.F)) {
+        return;
+    }
+
+    int8_t offset = static_cast<int8_t>(byte);
+    cpu.pc = cpu.pc + offset;
+    cpu.idle_m_cycle();
 }
-Instruction CALL(ConditionCheck cc){
-    return Instruction {
-        [](CPU& cpu) {cpu.latch.Z = cpu.fetch_byte();},
-        [cc](CPU& cpu) {
-            cpu.latch.W = cpu.fetch_byte();
-            if(!cc(cpu.F)) cpu.skip_inst();
-        },
-        [](CPU& cpu) {cpu.sp--;},
-        [](CPU& cpu) {
-            cpu.write_memory(cpu.sp, (cpu.pc+1) >> 8);
-            cpu.sp--;
-        },
-        [](CPU& cpu) {
-            cpu.write_memory(cpu.sp, (cpu.pc+1) & 0xff);
-            cpu.pc = cpu.latch.combined() - 1;
-        },
-        [](CPU&){}
-    };
+void CALL(CPU& cpu, ConditionCheck cc){
+    uint8_t addr_lo = cpu.fetch_byte();
+    uint8_t addr_hi = cpu.fetch_byte();
+
+    if(!cc(cpu.F)) return;
+
+    cpu.sp--;
+    cpu.write_memory(cpu.sp, cpu.pc >> 8);
+    cpu.sp--;
+    cpu.write_memory(cpu.sp, cpu.pc & 0xff);
+    cpu.pc = pair(addr_hi, addr_lo);
+
+    cpu.idle_m_cycle();
 }
-Instruction RET(){ 
+void RET(CPU& cpu){ 
     //absolute return takes 4 cycles,
     //conditional return takes 5 cycles if condition is true
-    return Instruction{
-        [](CPU& cpu) {
-            cpu.latch.Z = cpu.read_memory(cpu.sp);
-            cpu.sp++;
-        },
-        [](CPU& cpu) {
-            cpu.latch.W = cpu.read_memory(cpu.sp);
-            cpu.sp++;
-        },
-        [](CPU& cpu) {
-            cpu.pc = cpu.latch.combined() - 1;
-        },
-        [](CPU& cpu) {}
-    };
+    uint8_t addr_lo = cpu.read_memory(cpu.sp);
+    cpu.sp++;
+    uint8_t addr_hi = cpu.read_memory(cpu.sp);
+    cpu.sp++;
+    cpu.pc = pair(addr_hi, addr_lo);
+    cpu.idle_m_cycle();
 }
-Instruction RET_IF(ConditionCheck cc) {
+void RET_IF(CPU& cpu, ConditionCheck cc) {
     //unlike conditional CALL, JP, JR, conditional RET has 
     //a dedicated cycle just for condition check
-    return Instruction {
-        [cc](CPU& cpu) {
-            if(!cc(cpu.F)) cpu.skip_inst();
-        },
-        [](CPU& cpu) {
-            cpu.latch.Z = cpu.read_memory(cpu.sp);
-            cpu.sp++;
-        },
-        [](CPU& cpu) {
-            cpu.latch.W = cpu.read_memory(cpu.sp);
-            cpu.sp++;
-        },
-        [](CPU& cpu) {
-            cpu.pc = cpu.latch.combined() - 1;
-        },
-        [](CPU& cpu) {}
-    };
+    cpu.idle_m_cycle();
+    if(!cc(cpu.F)) {
+        return;
+    }
+
+    uint8_t addr_lo = cpu.read_memory(cpu.sp);
+    cpu.sp++;
+    uint8_t addr_hi = cpu.read_memory(cpu.sp);
+    cpu.sp++;
+    cpu.pc = pair(addr_hi, addr_lo);
+    cpu.idle_m_cycle();
 }
 
-Instruction RETI() {
-    return Instruction{
-        [](CPU& cpu) {
-            cpu.latch.Z = cpu.read_memory(cpu.sp);
-            cpu.sp++;
-        },
-        [](CPU& cpu) {
-            cpu.latch.W = cpu.read_memory(cpu.sp);
-            cpu.sp++;
-        },
-        [](CPU& cpu) {
-            cpu.pc = cpu.latch.combined() - 1;
-            cpu.IME = true;
-        },
-        [](CPU& cpu) {}
-    };
+void RETI(CPU& cpu) {
+    uint8_t addr_lo = cpu.read_memory(cpu.sp);
+    cpu.sp++;
+    uint8_t addr_hi = cpu.read_memory(cpu.sp);
+    cpu.sp++;
+    cpu.pc = pair(addr_hi, addr_lo);
+    cpu.IME = true;
+    cpu.idle_m_cycle();
 }
 
-Instruction RST(uint8_t addr) {
+void RST(CPU& cpu, uint8_t addr) {
     //CALL to fixed 1-byte address
-    return Instruction {
-        [](CPU& cpu) {cpu.sp--;},
-        [](CPU& cpu) {
-            //push address of instruction after the RST
-            cpu.write_memory(cpu.sp, (cpu.pc+1) >> 8);
-            cpu.sp--;
-        },
-        [addr](CPU& cpu) {
-            cpu.write_memory(cpu.sp, (cpu.pc+1) & 0xff);
-            cpu.pc = addr - 1;
-        },
-        [](CPU& cpu) {}
-    };
-}
-
-Instruction ISR(uint8_t addr) {
-    return Instruction {
-        [](CPU& cpu) {cpu.sp--;},
-        [](CPU& cpu) {
-            //unlike RST, we push address of instruction in which 
-            //the CPU was interrupted
-            cpu.write_memory(cpu.sp, cpu.pc >> 8); // Push PCH
-            cpu.sp--;
-        },
-        [addr](CPU& cpu) {
-            cpu.write_memory(cpu.sp, cpu.pc & 0xff); // Push PCL
-            cpu.pc = addr - 1; // Set PC for next fetch
-        },
-        [](CPU& cpu) {
-
-        }
-    };
+    cpu.sp--;
+    cpu.write_memory(cpu.sp, cpu.pc >> 8);
+    cpu.sp--;
+    cpu.write_memory(cpu.sp, cpu.pc & 0xff);
+    cpu.pc = addr;
+    cpu.idle_m_cycle();
 }
 
 //--------------------MISC-------------------//
-Instruction DI() {
-    return Instruction {
-        [](CPU& cpu) {cpu.IME = false;}
-    };
+void DI(CPU& cpu) {
+    cpu.IME = false;
 }
-Instruction EI() {
-    return Instruction {
-        [](CPU& cpu) {
-            cpu.IME = true;
-        }
-    };
+void EI(CPU& cpu) {
+    cpu.schedule_ei();
 }
 
-Instruction HALT() {
-    return Instruction {
-        [](CPU& cpu) {cpu.halt();}
-    };
+void  HALT(CPU& cpu) {
+    cpu.halt();
 }
 
 

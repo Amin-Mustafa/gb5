@@ -7,6 +7,7 @@
 
 class MMU;
 class InterruptController;
+class Bus;
 
 class Timer {
 private:
@@ -25,7 +26,7 @@ public:
     static constexpr uint16_t START = 0xFF04;
     static constexpr uint16_t END   = 0xFF07;
 
-    Timer(MMU& mmu, InterruptController& int_controller);
+    Timer(Bus& bus, MMU& mmu, InterruptController& int_controller);
     void tick();
 
     uint8_t ext_read(uint16_t addr);

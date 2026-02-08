@@ -15,6 +15,7 @@
 class MMU;
 class InterruptController;
 class LCD;
+class Bus;
 
 class PPU {
 private:
@@ -53,7 +54,7 @@ private:
     void v_blank();
 
 public: //state machine
-    PPU(MMU& mmu, InterruptController& interrupt_controller);
+    PPU(Bus& bus, MMU& mmu, InterruptController& interrupt_controller);
     
     void connect_display(LCD* display) {
         screen = display;

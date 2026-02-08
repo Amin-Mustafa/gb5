@@ -5,8 +5,7 @@
 
 PPURegs::PPURegs(MMU& mmu) 
 //read/write via MMU
-    :mmu{mmu},
-     region{this, START, END}
+    :region{this, START, END}
     {
         mmu.add_region(&region);
         //defaults
@@ -50,10 +49,7 @@ void PPURegs::ext_write(uint16_t addr, uint8_t val) {
         case Space::SCX : scx   = val;  break;
         case Space::LY  : break; //read only
         case Space::LYC : lyc   = val;  break;
-        case Space::DMA : 
-            dma = val;
-            mmu.start_dma(val);
-            break;
+        case Space::DMA : dma = val; break;
         case Space::BGP : bgp   = val;  break;
         case Space::OBP0: obp_0 = val;  break;
         case Space::OBP1: obp_1 = val;  break;

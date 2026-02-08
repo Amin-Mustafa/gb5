@@ -7,10 +7,10 @@
 #include <string>
 #include <iostream>
 #include "Instruction.h"
+#include "Memory/Bus.h"
 
 class MMU;
 class Instruction;
-class Decoder;
 class InterruptController;
 enum class Interrupt : uint8_t;
 
@@ -20,14 +20,13 @@ enum class Flag {
 
 class CPU {
 public: //methods
-    CPU(MMU& mmu, InterruptController& ih);
+    CPU(Bus& bus, MMU& mmu, InterruptController& ih);
     ~CPU();
     
     //cpu clocked in m-cycles (1 m-cycle = 4 t-states)
     void tick();
-    
-    void print_state();
-    void log_state(std::ostream& os);
+
+    void idle_m_cycle() { bus.cycle(); }
 
     uint8_t read_memory(uint16_t addr);
     void write_memory(uint16_t addr, uint8_t val);
@@ -40,10 +39,9 @@ public: //methods
         return (F >> (int)fl) & (uint8_t)1;
     }
 
-    //skip to end of instruction
-    void skip_inst() {skip_to_inst_end = true;}
     void prefix_mode() {cb_mode = true;}
     void halt();
+    void schedule_ei() {ei_scheduled = true;}
 
 public: //data
     //program counter and stack pointer
@@ -52,38 +50,23 @@ public: //data
     //data registers
     uint8_t A, B, C, D, E, H, L, F;
     bool IME = false;
-    bool int_enable_pending = false;
-
-    struct {
-        uint8_t W, Z;
-        uint16_t combined() const {return (W << 8) | Z;}
-        void set(uint16_t val) {W = val >> 8; Z = val & 0xFF;}
-    } latch;
-
 private:
     using StateFunction = void (CPU::*)();  //pointer to state function
 
     int cycles;
 
-    //CPU states
-    StateFunction current_state;
-    void initial_fetch();
-    void execute_fetch();
-    void interrupted();
-    void halted();
+    void service_interrupt(Interrupt irq);
+    void execute(uint8_t opcode);
+    void execute_cb(uint8_t opcode);
+    bool halted;
 
-    //execution
-    Instruction* fetch_inst();
-    void execute_inst();
     bool cb_mode = false;
     bool halt_bug = false;
+    bool ei_scheduled = false;
 
     //facilities
-    MMU& mmu;
+    Bus& bus;
     InterruptController& interrupt_controller;
-    std::unique_ptr<Decoder> decoder;
-    Instruction* current_inst;
-    bool skip_to_inst_end = false;
 };
 
 #endif

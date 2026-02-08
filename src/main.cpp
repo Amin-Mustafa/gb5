@@ -1,27 +1,27 @@
-#include "../include/Memory/MMU.h"
-#include "../include/Memory/MemoryMap.h"
-#include "../include/CPU.h"
-#include "../include/Disassembler.h"
-#include "../include/Graphics/PPU.h"
-#include "../include/Control/JoyPad.h"
-#include "../include/Control/InputHandler.h"
-#include "../include/Graphics/LCD.h"    
-#include "../include/Memory/Spaces.h"   
-#include "../include/Timer.h" 
+#include "Memory/MMU.h"
+#include "Memory/MemoryMap.h"
+#include "CPU.h"
+#include "Disassembler.h"
+#include "Graphics/PPU.h"
+#include "Control/JoyPad.h"
+#include "Control/InputHandler.h"
+#include "Graphics/LCD.h"    
+#include "Memory/Spaces.h"   
+#include "Timer.h" 
+#include "Memory/Bus.h" 
 #include <iostream>
 
-constexpr unsigned long FRAME_DOTS = 70224;
-constexpr unsigned int SCANLINE_DOTS = 456;
+constexpr unsigned long FRAME_CYCLES = 17556;
 
 int main(int argc, char* argv[]) {
-    MMU mem;
-    MemoryMap map(mem);
-    CPU cpu(mem, map.interrupt_controller);
-    PPU ppu(mem, map.interrupt_controller);
-    JoyPad jp(mem, map.interrupt_controller);
+    Bus bus;
+    MMU mmu(bus);
+    MemoryMap map(mmu);
+    CPU cpu(bus, mmu, map.interrupt_controller);
+    PPU ppu(bus, mmu, map.interrupt_controller);
+    JoyPad jp(bus, mmu, map.interrupt_controller);
     InputHandler ih;
-    Timer tim(mem, map.interrupt_controller);
-    Disassembler dis(mem);
+    Timer tim(bus, mmu, map.interrupt_controller);
     LCD display(3);
 
     std::string cart = "../ROM/tetris.gb";
@@ -32,23 +32,16 @@ int main(int argc, char* argv[]) {
 
     SDL_Event e;
     bool quit = false;
-    unsigned long cycles = 0;
-    unsigned long frame_count = 0;
+
+    unsigned long next_frame_target = FRAME_CYCLES;
 
     while(!quit) {
-        for (size_t i = 0; i < FRAME_DOTS; i++) {
-            ppu.tick();
-            tim.tick();
-            jp.read_input();
-            cycles++;
-
-            if ((cycles % 4) == 0) {
-                cpu.tick();
-                mem.tick();
-            }
+        while(bus.get_cycles() < next_frame_target) {
+            cpu.tick();
         }
 
-        cycles = 0;
+        next_frame_target += FRAME_CYCLES;
+
         display.draw_frame();
 
         while(SDL_PollEvent(&e)) {

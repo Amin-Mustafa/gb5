@@ -6,6 +6,7 @@
 class MMU;
 class InterruptController;
 class InputHandler;
+class Bus;
 
 class JoyPad {
 private:
@@ -18,7 +19,7 @@ private:
     InputHandler* ih;   //SDL input handler to capture current key state
 public:
     static constexpr uint16_t ADDRESS = 0xFF00;
-    JoyPad(MMU&, InterruptController&);
+    JoyPad(Bus& bus, MMU& mmu, InterruptController& ic);
 
     void connect_input_handler(InputHandler* input_handler) {
         ih = input_handler;
