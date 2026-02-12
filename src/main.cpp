@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
     Timer tim(bus, mmu, map.interrupt_controller);
     LCD display(3);
 
-    std::string cart = "../ROM/tetris.gb";
+    std::string cart = "../ROM/kungfu.gb";
 
     map.rom.load(cart);
     ppu.connect_display(&display);

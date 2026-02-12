@@ -15,6 +15,10 @@ namespace Space {
         BLOCK_2 = 0x9000
     };
 
+    enum ROM : uint16_t {
+        START = 0x0000, END = 0x7FFF
+    };
+
     enum PPU_Register: uint16_t {
         LCDC = 0xFF40, STAT, SCY, SCX, LY, LYC, DMA, BGP, OBP0, OBP1, WY, WX,
     };

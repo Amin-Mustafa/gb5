@@ -5,21 +5,24 @@
 #include <cstdint>
 #include <memory>
 #include <array>
+#include "IO.h"
+#include "Spaces.h"
 
 class MemoryRegion;
-class DmaController;
-class Bus;
 
 class MMU {
 private:   
-    std::array<MemoryRegion*, 0x10000> memory_lookup;
-    MemoryRegion* region_of(uint16_t addr);
+    std::array<uint8_t*, 0x100> pages;
+    std::array<IO*, 0x100> io_registers;
+    std::array<uint8_t, 127> hram;
 public:
     MMU(Bus& bus);
     ~MMU();
-    void add_region(MemoryRegion* region);
+    void map_region(uint16_t start, uint16_t end, uint8_t* data);
+    void unmap_region(uint16_t start, uint16_t end);
+    void map_io(uint8_t reg_addr_low, IO* io_reg);
     uint8_t read(uint16_t addr);
-    void write(uint16_t addr, uint8_t data);
+    void write(uint16_t addr, uint8_t val);
 };
 
 #endif
