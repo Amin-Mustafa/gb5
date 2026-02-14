@@ -62,12 +62,22 @@ void PPU::tick() {
 
     //check if stat trigger executed
     if(stat_trigger.rising_edge(STAT::stat_line(regs))) {
-        if (regs.ly == regs.lyc && (regs.stat & 0x40)) {
-            std::cout << "STAT LYC INT fired at Line " << (int)regs.ly << "\n";
-        }
         ic.request(Interrupt::LCD);
     }
     cycles++;
+}
+
+void PPU::check_window_transition() {
+    bool window_triggered = (LCDC::win_enable(regs)) &&
+                            (regs.ly >= regs.wy)    &&
+                            ((int)scanline_x >= (int)regs.wx - 7);    
+
+    if(!in_window && window_triggered) {
+        in_window = true;
+        //transform coordinates into window space
+        bg_fetcher.set_mode(PixelFetcher::Mode::WIN_FETCH);
+        bg_fetcher.set_position(scanline_x, regs.ly);
+    }
 }
 
 
@@ -83,20 +93,6 @@ uint8_t PPU::sprite_triggered() const {
     return spr_buf.count();
 }
 
-void PPU::check_window_transition() {
-    bool window_triggered = (LCDC::win_enable(regs)) &&
-                            (regs.ly >= regs.wy)    &&
-                            ((int)scanline_x >= (int)regs.wx - 7);    
-
-    if(!in_window && window_triggered) {
-        in_window = true;
-        //transform coordinates into window space
-        bg_fetcher.set_mode(PixelFetcher::Mode::WIN_FETCH);
-        bg_fetcher.set_position(scanline_x, regs.ly);
-        bg_fetcher.reset_fetch();
-    }
-}
-
 void PPU::go_next_scanline(){
     regs.ly = (regs.ly+1) % (screen->height() + VBLANK_LINES);
     STAT::update_lyc_flag(regs);
@@ -110,14 +106,13 @@ void PPU::prep_scanline() {
     //reset fetch pipeline
     bg_fetcher.set_mode(PixelFetcher::Mode::BG_FETCH);
     bg_fetcher.set_position(scanline_x, regs.ly);
-    bg_fetcher.reset_fetch();
-
+    
     bg_fifo.clear();
     spr_fifo.clear();
     spr_fetcher.clear_queue();
 
     check_window_transition();
-
+    
     //check visible sprites "behind" the screen
     for(int i = 0; i < spr_buf.count(); ++i) {
         const Sprite& spr = spr_buf.at(i);
@@ -136,7 +131,8 @@ void PPU::advance_scanline() {
 
     // check if reached sprite
     uint8_t index = sprite_triggered();
-    if (index != spr_buf.count()) {
+    if (index != spr_buf.count())
+    {
         bg_fetcher.request_stop(); // stop after completing current step
         spr_fetcher.queue_sprite(spr_buf.at(index));
     }
@@ -145,17 +141,12 @@ void PPU::advance_scanline() {
 void PPU::oam_scan() {  
     //AKA mode 2
     //std::cout << "STATE: OAM SCAN\n";
-    if(cycles == OAM_SCAN_START) { 
+    if(cycles == OAM_SCAN_START) {
         STAT::set_mode(regs, STAT::MODE_2);
         oam.accessible = false;
-        spr_buf.clear();   
+        spr_buf.clear();   //prepare sprite buffer
         oam_counter = 0;
     }
-
-    if(cycles == OAM_SCAN_START + 1) { 
-        go_next_scanline();
-    }
-
     if((cycles % 2) == 0) {
         //every 2 dots
         if(!spr_buf.full() && LCDC::obj_enable(regs)) {
@@ -249,11 +240,12 @@ void PPU::h_blank() {
     }
 
     //start next oam scan
+    go_next_scanline();
     cycles = OAM_SCAN_START - 1;
     current_state = oam_scan;
     curr_state_enum = State::OAM_SCAN; 
 
-    if(regs.ly == screen->height() - 1) {
+    if(regs.ly == screen->height()) {
         //if next scanline is off-screen
         cycles = VBLANK_START - 1;
         current_state = v_blank;
@@ -266,22 +258,20 @@ void PPU::v_blank() {
     //std::cout <<"STATE: VBLANK\n";
     if(cycles == VBLANK_START) {
         //first dot of V BLANK
-        go_next_scanline();
         STAT::set_mode(regs, STAT::MODE_1);
         ic.request(Interrupt::VBLANK);
         return;
     }
 
-    if(cycles % (SCANLINE_END + 1) == 0) {
-        if(regs.ly == screen->height() + VBLANK_LINES - 1) {
+    if(cycles % (SCANLINE_END+1) == 0) {
+        go_next_scanline();
+
+        if(regs.ly == 0) {
             //looped back to start of screen
             cycles = OAM_SCAN_START - 1;
             current_state = oam_scan;
             curr_state_enum = State::OAM_SCAN;
-            return;
         }
-
-        go_next_scanline();
     }
 }
 
