@@ -16,7 +16,7 @@ class PPURegs;
 class SpriteFetcher {
 private:
     std::array<uint8_t, 8> px_buf;
-    RingBuffer<const Sprite*, 8> spr_queue;
+    RingBuffer<Sprite, 8> spr_queue;
 
     //storage access
     const VRAM& vram;      
@@ -42,7 +42,7 @@ public:
         return on;
     }
     void queue_sprite(const Sprite& spr) {
-        spr_queue.push(&spr);
+        spr_queue.push(spr);
     }
 
     //control

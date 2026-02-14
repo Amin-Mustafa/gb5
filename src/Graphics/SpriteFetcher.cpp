@@ -18,6 +18,10 @@ std::string spr_fetcher_state_to_str(int cycles);
 bool px_occupied(SprFifo& fifo, SpritePixel candidate);
 
 void SpriteFetcher::start() {
+    if(spr_queue.empty()) {
+        on = false;
+        return;
+    }
     on = true;
     cycles = GET_ID_START;
     curr_state = get_tile_index;
@@ -50,7 +54,7 @@ void SpriteFetcher::tick()  {
     cycles++;
 }
 void SpriteFetcher::get_tile_index() {
-    tile_index = spr_queue.front()->index();
+    tile_index = spr_queue.front().index();
 
     curr_state = get_row;
 }
@@ -62,8 +66,8 @@ void SpriteFetcher::get_row() {
         uint8_t spr_height = BASE_SPR_HEIGHT + BASE_SPR_HEIGHT*(uint8_t)obj_size(regs);
         
         //the tile row is fixed here 
-        row = regs.ly - spr_queue.front()->y() + SCREEN_Y_OFFSET;
-        if(spr_queue.front()->y_flip()) {
+        row = regs.ly - spr_queue.front().y() + SCREEN_Y_OFFSET;
+        if(spr_queue.front().y_flip()) {
             row = (spr_height-1) - row;  
         }
 
@@ -90,11 +94,11 @@ void SpriteFetcher::get_tile_line() {
 }
 
 void SpriteFetcher::push_to_fifo() {
-    const Sprite* spr = spr_queue.pop();
+    Sprite spr = spr_queue.pop();
     //color index from vram, attributes from spr
     SpritePixel spr_px;
 
-    bool reversed = spr->x_flip();
+    bool reversed = spr.x_flip();
     int start, end, step;
 
     if(reversed) {
@@ -109,9 +113,9 @@ void SpriteFetcher::push_to_fifo() {
 
     for(int i = start; i != end; i += step) {
         spr_px.color = px_buf[i];
-        spr_px.x = spr->x() + (reversed ? (px_buf.size()-1-i) : i);
-        spr_px.palette = spr->palette();
-        spr_px.priority = spr->priority();
+        spr_px.x = spr.x() + (reversed ? (px_buf.size()-1-i) : i);
+        spr_px.palette = spr.palette();
+        spr_px.priority = spr.priority();
         
         if(!px_occupied(fifo, spr_px) && spr_px.x >= SCREEN_X_OFFSET) {
             fifo.push(spr_px);
@@ -140,15 +144,6 @@ void SpriteFetcher::print_state() {
         std::cout << (int)n << ' ';
     }
     std::cout << "\t(cycle " << (int)cycles << ")";
-    std::cout << std::endl;
-    
-    //print current sprite head
-    std::cout << "Current Sprite: ";
-    if(!spr_queue.front()) {
-        std::cout << "NULL";
-    } else {
-        std::cout << sprite_info(*spr_queue.front());
-    }
     std::cout << std::endl;
 }
 

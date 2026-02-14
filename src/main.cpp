@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
     Disassembler dis(mem);
     LCD display(3);
 
-    std::string cart = "../ROM/tetris.gb";
+    std::string cart = "../ROM/boxxle.gb";
 
     map.rom.load(cart);
     ppu.connect_display(&display);
