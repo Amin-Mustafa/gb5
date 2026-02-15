@@ -35,7 +35,7 @@ private:
     uint8_t oam_counter;
     LCD* screen;
     bool in_window;
-    bool window_triggered() const;
+    void check_window_transition();
     uint8_t sprite_triggered() const;
 
     //scanline

@@ -69,12 +69,19 @@ void PPU::tick() {
     cycles++;
 }
 
-bool PPU::window_triggered() const {
-    return  (!in_window)            &&
-            (LCDC::win_enable(regs)) &&
-            (regs.ly == regs.wy)    &&
-            (scanline_x >= regs.wx - 7);           
-}    
+void PPU::check_window_transition() {
+    bool window_triggered = (LCDC::win_enable(regs)) &&
+                            (regs.ly >= regs.wy)    &&
+                            ((int)scanline_x >= (int)regs.wx - 7);    
+
+    if(!in_window && window_triggered) {
+        in_window = true;
+        //transform coordinates into window space
+        bg_fetcher.set_mode(PixelFetcher::Mode::WIN_FETCH);
+        bg_fetcher.set_position(scanline_x, regs.ly);
+    }
+}
+
 
 uint8_t PPU::sprite_triggered() const {
     if(!LCDC::obj_enable(regs)) {
@@ -96,21 +103,18 @@ void PPU::go_next_scanline(){
 void PPU::prep_scanline() {
     //start from the left
     scanline_x = 0;
+    in_window = false;
 
     //reset fetch pipeline
     bg_fetcher.set_mode(PixelFetcher::Mode::BG_FETCH);
     bg_fetcher.set_position(scanline_x, regs.ly);
+    
     bg_fifo.clear();
     spr_fifo.clear();
     spr_fetcher.clear_queue();
 
-    //check win/spr triggers
-    if(window_triggered()) {
-        in_window = true;
-        bg_fetcher.set_mode(PixelFetcher::Mode::WIN_FETCH);
-        //transform coordinates into window space
-        bg_fetcher.set_position(scanline_x, regs.ly);
-    }
+    check_window_transition();
+    
     //check visible sprites "behind" the screen
     for(int i = 0; i < spr_buf.count(); ++i) {
         const Sprite& spr = spr_buf.at(i);
@@ -125,14 +129,7 @@ void PPU::advance_scanline() {
     //increment scanline x and check win/spr triggers
     scanline_x++;
 
-    // check if reached window
-    if (window_triggered())
-    {
-        in_window = true;
-        bg_fetcher.set_mode(PixelFetcher::Mode::WIN_FETCH);
-        // transform coordinates into window space
-        bg_fetcher.set_position(scanline_x, regs.ly);
-    }
+    check_window_transition();
 
     // check if reached sprite
     uint8_t index = sprite_triggered();
@@ -191,6 +188,9 @@ void PPU::pixel_transfer() {
             //bg fetcher done using VRAM bus, 
             //switch to spr fetcher
             spr_fetcher.start();
+            if(!spr_fetcher.active()) {
+                bg_fetcher.start();
+            }
         }
     } else {
         spr_fetcher.tick();

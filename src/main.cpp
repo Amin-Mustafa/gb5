@@ -24,9 +24,10 @@ int main(int argc, char* argv[]) {
     Timer tim(bus, mmu, map.interrupt_controller);
     LCD display(3);
 
-    std::string cart = "../ROM/kungfu.gb";
+    std::string cart = argv[1];
+    std::string filename = "../ROM/" + cart + ".gb";
 
-    map.rom.load(cart);
+    map.rom.load(filename);
     ppu.connect_display(&display);
     jp.connect_input_handler(&ih);
 
