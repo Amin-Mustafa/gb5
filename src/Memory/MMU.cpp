@@ -1,9 +1,8 @@
 #include "Memory/MMU.h"
 #include "Memory/Bus.h"
-#include "Memory/MemoryRegion.h"
-#include "Memory/DmaController.h"
-#include "Memory/Spaces.h"
+#include "Memory/IO.h"
 #include <stdexcept>
+#include <iostream>
 
 MMU::MMU(Bus& bus)  
     {
@@ -18,7 +17,7 @@ void MMU::map_region(uint16_t start, uint16_t end, uint8_t* data) {
     //map pages as byte arrays
     uint8_t start_page = start >> 8;
     uint8_t end_page   = end >> 8;
-    for(auto i = start_page; i <= end_page ++i) {
+    for(auto i = start_page; i <= end_page; ++i) {
         uint16_t offset = (i - start_page) * 0x100; //address of current memory page
         pages[i] = data + offset;
     }
@@ -27,14 +26,18 @@ void MMU::map_region(uint16_t start, uint16_t end, uint8_t* data) {
 void MMU::unmap_region(uint16_t start, uint16_t end) {
     uint8_t start_page = start >> 8;
     uint8_t end_page   = end >> 8;
-    for(auto i = start_page; i <= end_page ++i) {
+    for(auto i = start_page; i <= end_page; ++i) {
         pages[i] = nullptr;
     }
 }
 
+void MMU::map_io_register(uint16_t addr, IO* reg) {
+    io_registers[addr & 0xFF] = reg;
+}
+
 void MMU::map_io_region(uint16_t start, uint16_t end, IO* io_reg) {
     for(auto i = start; i <= end; ++i) {
-        io_table[i & 0xFF] = io_reg;
+        io_registers[i & 0xFF] = io_reg;
     }
 }
 

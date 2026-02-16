@@ -1,11 +1,11 @@
-#include "../../include/Memory/InterruptController.h"
-#include "../../include/Arithmetic.h"
-#include "../../include/CPU.h"
-#include "../../include/Instruction.h"
+#include "Memory/InterruptController.h"
+#include "Memory/MMU.h"
+#include "Arithmetic.h"
 
-InterruptController::InterruptController(MMU& mem)
-    :irq{mem, 0xFF0F}, ie{mem, 0xFFFF} 
+InterruptController::InterruptController(MMU& mmu)
     {
+        mmu.map_io_register(IF, &irq);
+        mmu.map_io_register(IE, &ie);
         irq.set(0xE1);
         ie.set(0x00);
     }

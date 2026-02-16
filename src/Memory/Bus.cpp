@@ -1,6 +1,7 @@
 #include "Memory/Bus.h"    
 #include "CPU.h"    
 #include "Graphics/PPU.h"  
+#include "Graphics/OAM.h"
 #include "Memory/MMU.h"
 #include "Control/Joypad.h"
 #include "Timer.h"
@@ -8,10 +9,10 @@
 
 void Bus::cycle() { 
     if(dmac.active()) {
-        uint16_t src = dmac.start_address() + dmac.offset();
-        uint16_t dest = Space::OAM_START + dmac.offset();
-        uint8_t val = mmu->read(src);
-        mmu->write(dest, val);
+        uint16_t src_addr = dmac.start_address() + dmac.offset();
+        uint16_t dest_addr = Space::OAM_START + dmac.offset();
+        uint8_t val = mmu->read(src_addr);
+        oam_dma_dest->write(dest_addr, val);
         dmac.tick();
     }
     if(!ppu || !tim || !jp) return; 

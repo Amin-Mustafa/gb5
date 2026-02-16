@@ -1,18 +1,17 @@
 #ifndef JOYPAD_H
 #define JOYPAD_H
 
-#include "../Memory/MemoryRegion.h"
+#include "Memory/IO.h"
 
 class MMU;
 class InterruptController;
 class InputHandler;
 class Bus;
 
-class JoyPad {
+class JoyPad : public IO {
 private:
     //memory-mapped joypad register
     uint8_t data;   
-    MemoryRegion region;
 
     InterruptController& ic;
 
@@ -37,8 +36,8 @@ public:
         return !((data >> 4) & (uint8_t)1);
     }
 
-    uint8_t ext_read(uint16_t addr);
-    void ext_write(uint16_t addr, uint8_t val); 
+    uint8_t read(uint16_t addr) override;
+    void write(uint16_t addr, uint8_t val) override; 
 };
 
 #endif

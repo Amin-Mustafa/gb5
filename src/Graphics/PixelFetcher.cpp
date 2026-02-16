@@ -1,9 +1,9 @@
-#include "../../include/Graphics/PixelFetcher.h"
-#include "../../include/Graphics/VRAM.h"
-#include "../../include/Memory/Spaces.h"
-#include "../../include/Graphics/RingBuffer.h"
-#include "../../include/Graphics/Tile.h"
-#include "../../include/Graphics/PPURegs.h"
+#include "Graphics/PixelFetcher.h"
+#include "Graphics/VRAM.h"
+#include "Graphics/RingBuffer.h"
+#include "Graphics/Tile.h"
+#include "Graphics/PPURegs.h"
+#include "Memory/Spaces.h"
 
 #include <iostream>
 #include <format>
@@ -20,8 +20,7 @@ std::string fetcher_state_to_str(PixelFetcher::State);
 PixelFetcher::PixelFetcher(const VRAM& vram, const PPURegs& control, BgFifo& fifo) 
     : on{true},
       vram{vram}, regs{control}, fifo{fifo},
-      curr_state{ init },
-      curr_state_enum{State::INIT}
+      curr_state{ init }
     {}
 
 void PixelFetcher::tick() {
@@ -36,7 +35,6 @@ void PixelFetcher::init() {
         return;
     }
     curr_state = get_tile_index;
-    curr_state_enum = State::GET_ID;
 
     //wait for init to finish before checking stop
     if(stop_pending) {
@@ -67,7 +65,6 @@ void PixelFetcher::get_tile_index() {
     tile_index = vram.read(map + tile_y*0x20 + x_pos);
 
     curr_state = get_tile;
-    curr_state_enum = State::GET_TILE;
 
     if(stop_pending) {
         on = false;
@@ -88,7 +85,6 @@ void PixelFetcher::get_tile() {
     tile_data = vram.tile_at(tile_index, mode);
 
     curr_state = get_tile_line;
-    curr_state_enum = State::GET_LINE;
 
     if(stop_pending) {
         on = false;
@@ -107,7 +103,6 @@ void PixelFetcher::get_tile_line() {
     }
 
     curr_state = push_to_fifo;
-    curr_state_enum = State::PUSH;
 
     if(stop_pending) {
         on = false;
@@ -132,7 +127,6 @@ void PixelFetcher::push_to_fifo(){
 void PixelFetcher::reset_fetch() {
     cycles = GET_INDEX_START - 1;
     curr_state = get_tile_index;
-    curr_state_enum = State::GET_ID;
     std::fill(px_buf.begin(), px_buf.end(), 0);
 }
 
@@ -141,7 +135,6 @@ void PixelFetcher::set_mode(Mode mode) {
     std::fill(px_buf.begin(), px_buf.end(), 0);
     curr_state = init;
     cycles = INIT_START;
-    curr_state_enum = State::INIT;
 }
 
 void PixelFetcher::set_position(uint8_t x, uint8_t y) {
@@ -170,50 +163,10 @@ void PixelFetcher::start() {
 }
 
 void PixelFetcher::request_stop() {
-    if(curr_state_enum == State::PUSH) {
+    if(curr_state == &push_to_fifo) {
         on = false; //stop right away
     } else {
         //wait until done with VRAM bus
         stop_pending = true;
-    }
-}
-
-void PixelFetcher::print_state() {
-    //print position
-    std::cout << "Position: (" 
-              << (int)x_pos << ", "<<(int)y_pos 
-              << ")\n";
-    //print current state
-    std::cout << "Fetch state: ";
-    if(!on) {
-        std::cout << "INACTIVE";
-    } else {
-        std::cout << fetcher_state_to_str(curr_state_enum);
-    }
-    std::cout << std::endl;
-
-    //print the pixel queue
-    std::cout << "Fetch queue: ";
-    for(const auto& n : px_buf) {
-        std::cout << (int)n << ' ';
-    } 
-    std::cout << "\t(cycle " << (int)cycles << ")";
-    std::cout << std::endl;
-}
-
-std::string fetcher_state_to_str(PixelFetcher::State state) {
-    switch(state) {
-        case PixelFetcher::State::INIT:
-            return "INIT";
-        case PixelFetcher::State::GET_ID:
-            return "GET ID";
-        case PixelFetcher::State::GET_TILE:
-            return "GET TILE";
-        case PixelFetcher::State::GET_LINE:
-            return "GET LINE";
-        case PixelFetcher::State::PUSH:
-            return "PUSH";
-        case PixelFetcher::State::PAUSING:
-            return "PAUSING";
     }
 }

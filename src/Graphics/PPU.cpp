@@ -33,16 +33,16 @@ std::string ppu_state_to_str(PPU::State state);
 PPU::PPU(Bus& bus, MMU& mmu, InterruptController& interrupt_controller)
     :vram{mmu},
      oam{mmu},
-     regs{mmu}, 
+     regs{bus, mmu}, 
      mmu{mmu},
      bg_fetcher{vram, regs, bg_fifo},
      spr_fetcher{vram, regs, spr_fifo},
      ic{interrupt_controller},
-     current_state{ oam_scan },
-     curr_state_enum{State::OAM_SCAN}
+     current_state{ oam_scan }
      {
         bg_fetcher.set_position(scanline_x, regs.ly);
         bus.connect(*this);
+        bus.oam_dma_dest = &oam;
      }
 
 void PPU::tick() {
@@ -51,10 +51,9 @@ void PPU::tick() {
         regs.ly = 0;
         scanline_x = 0;
         current_state = oam_scan;
-        curr_state_enum = State::OAM_SCAN;
         cycles = OAM_SCAN_START;
-        vram.accessible = true;
-        oam.accessible = true;
+        vram.unblock(mmu);
+        oam.unblock(mmu);
         STAT::set_mode(regs, STAT::Mode::MODE_0);
         return;
     }
@@ -145,7 +144,7 @@ void PPU::oam_scan() {
     //std::cout << "STATE: OAM SCAN\n";
     if(cycles == OAM_SCAN_START) {
         STAT::set_mode(regs, STAT::MODE_2);
-        oam.accessible = false;
+        oam.block(mmu);
         spr_buf.clear();   //prepare sprite buffer
         oam_counter = 0;
     }
@@ -169,7 +168,6 @@ void PPU::oam_scan() {
     }
     if(cycles == OAM_SCAN_END) {
         current_state = pixel_transfer;
-        curr_state_enum = State::PIXEL_TRANSFER;
         prep_scanline();
     }
 }
@@ -179,7 +177,7 @@ void PPU::pixel_transfer() {
     //std::cout << "STATE: PIXEL TRANSFER\n";
     if(cycles == PIXEL_TRANSFER_START) {
         STAT::set_mode(regs, STAT::MODE_3);
-        vram.accessible = false;
+        vram.block(mmu);
     }
     
     if(!spr_fetcher.active()) {
@@ -223,9 +221,8 @@ void PPU::pixel_transfer() {
     if(scanline_x >= screen->width()) {
         //end of line
         current_state = h_blank;
-        curr_state_enum = State::H_BLANK;
-        vram.accessible = true;
-        oam.accessible = true;
+        vram.unblock(mmu);
+        oam.unblock(mmu);
     }
 }
 
@@ -245,13 +242,11 @@ void PPU::h_blank() {
     go_next_scanline();
     cycles = OAM_SCAN_START - 1;
     current_state = oam_scan;
-    curr_state_enum = State::OAM_SCAN; 
 
     if(regs.ly == screen->height()) {
         //if next scanline is off-screen
         cycles = VBLANK_START - 1;
         current_state = v_blank;
-        curr_state_enum = State::V_BLANK;
     }
 }
 
@@ -272,46 +267,8 @@ void PPU::v_blank() {
             //looped back to start of screen
             cycles = OAM_SCAN_START - 1;
             current_state = oam_scan;
-            curr_state_enum = State::OAM_SCAN;
         }
     }
-}
-
-void PPU::print_state() {
-    std::cout << "cycle:" << cycles << std::endl;
-    std::cout << "STATE: " << ppu_state_to_str(curr_state_enum) << std::endl;
-    std::cout << "X:" << (int)(scanline_x - regs.scx % 8) << ' '; 
-    std::cout << std::format("LCDC:{:02x} ", regs.lcdc);
-    std::cout << std::format("STAT:{:02x} ", regs.stat);
-    std::cout << std::format("SCY:{:02x} ", regs.scy);
-    std::cout << std::format("SCX:{:02x} ", regs.scx);
-    std::cout << std::format("LY:{:02x} ", regs.ly);
-    std::cout << std::format("LYC:{:02x} ", regs.lyc);
-    std::cout << std::format("DMA:{:02x} ", regs.dma);
-    std::cout << std::format("BGP:{:02x} ", regs.bgp);
-    std::cout << std::format("OBP0:{:02x} ", regs.obp_0);
-    std::cout << std::format("OBP1:{:02x} ", regs.obp_1);
-    std::cout << std::format("WY:{:02x} ", regs.wy);
-    std::cout << std::format("WX:{:02x} ", regs.wx);
-    std::cout << std::endl;
-
-    std::cout << "BG Fetcher: " << '\n';
-    bg_fetcher.print_state();
-    std::cout << "BG FIFO: ";
-    bg_fifo.print();
-    std::cout << "SPR Fetcher: " << '\n';
-    spr_fetcher.print_state();
-    std::cout << "SPR BUFFER: " 
-              << "Count: " << (int)spr_buf.count()
-              << " Head: ";
-    if(spr_buf.count()) {
-    std::cout << "X:" << (int)spr_buf.at(0).x()
-              << ", Y:" << (int)spr_buf.at(0).y()
-              << ", Index:" << (int)spr_buf.at(0).index();
-    } else {
-        std::cout << "NULL";
-    }
-    std::cout << std::endl;
 }
 
 uint8_t display_color(uint8_t palette, uint8_t px) {
@@ -340,17 +297,4 @@ uint8_t mix_pixel(uint8_t bg_px, SpritePixel spr_px, const PPURegs& regs) {
     }
 
     return color;
-}
-
-std::string ppu_state_to_str(PPU::State state) {
-    switch(state) {
-        case PPU::State::OAM_SCAN:
-            return "OAM SCAN";
-        case PPU::State::PIXEL_TRANSFER:
-            return "PIXEL TRANSFER";
-        case PPU::State::H_BLANK:
-            return "H BLANK";
-        case PPU::State::V_BLANK:
-            return "V BLANK";
-    }
 }

@@ -20,14 +20,13 @@ Timer::Timer(Bus& bus, MMU& mmu, InterruptController& int_controller)
      modulo{0x00},
      control{0xF8},
      increment_trigger{},
-     region{this, START, END},
      ic{int_controller}
     {
-        mmu.add_region(&region);
+        mmu.map_io_region(START, END, this);
         bus.connect(*this);
     }
     
-uint8_t Timer::ext_read(uint16_t addr) {
+uint8_t Timer::read(uint16_t addr) {
     switch(addr) {
         case DIV : return static_cast<uint8_t>(div >> 8);
         case TIMA: return counter;
@@ -38,7 +37,7 @@ uint8_t Timer::ext_read(uint16_t addr) {
     }
 }
 
-void Timer::ext_write(uint16_t addr, uint8_t val) {
+void Timer::write(uint16_t addr, uint8_t val) {
     switch(addr) {
         case DIV : div = 0;         break;
         case TIMA: counter = val;   break;

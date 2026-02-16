@@ -1,7 +1,7 @@
 #ifndef ROM_H
 #define ROM_H
 
-#include <vector>
+#include <array>
 #include <cstdint>
 #include <string>
 

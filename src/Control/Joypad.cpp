@@ -19,12 +19,11 @@ std::string print_button(InputHandler::Mapping key);
 
 JoyPad::JoyPad(Bus& bus, MMU& mmu, InterruptController& int_controller)
     :data{0xCF},
-     region{this, ADDRESS, ADDRESS},
      ic{int_controller},
      dpad_state{0x0F}, 
      button_state{0x0F}
      {
-        mmu.add_region(&region);
+        mmu.map_io_register(ADDRESS, this);
         bus.connect(*this);
      }
     
@@ -32,7 +31,7 @@ JoyPad::JoyPad(Bus& bus, MMU& mmu, InterruptController& int_controller)
 void JoyPad::read_input() {   
    if(!ih) return;
 
-   uint8_t old_output = ext_read(ADDRESS);
+   uint8_t old_output = read(ADDRESS);
    //reset input state
    dpad_state = 0x0F;
    button_state = 0x0F;
@@ -71,7 +70,7 @@ void JoyPad::read_input() {
        }
     }
 
-   uint8_t new_output = ext_read(ADDRESS);
+   uint8_t new_output = read(ADDRESS);
 
    if ((old_output & ~new_output) & 0x0F) {
       //falling edge
@@ -80,7 +79,7 @@ void JoyPad::read_input() {
    }
 }
 
-uint8_t JoyPad::ext_read(uint16_t addr) {
+uint8_t JoyPad::read(uint16_t addr) {
    uint8_t output = data | 0xCF;
    
    if (dpad_enabled()) {
@@ -93,7 +92,7 @@ uint8_t JoyPad::ext_read(uint16_t addr) {
    return output;
 }
 
-void JoyPad::ext_write(uint16_t addr, uint8_t val) {
+void JoyPad::write(uint16_t addr, uint8_t val) {
    //lower nibble is read-only
    data = (val & 0x30) | (data & 0xCF);
 }

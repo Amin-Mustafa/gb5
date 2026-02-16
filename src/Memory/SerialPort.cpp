@@ -1,9 +1,8 @@
 #include <iostream>
-#include "../../include/Memory/SerialPort.h"
-#include "../../include/Memory/MMU.h"
-#include "../../include/Memory/MemoryRegion.h"
+#include "Memory/SerialPort.h"
+#include "Memory/MMU.h"
 
-uint8_t SerialPort::ext_read(uint16_t addr) {
+uint8_t SerialPort::read(uint16_t addr) {
     switch(addr) {
         case 0xFF01: return serial[0];
         case 0xFF02: return serial[1];
@@ -11,7 +10,7 @@ uint8_t SerialPort::ext_read(uint16_t addr) {
     }
 }
 
-void SerialPort::ext_write(uint16_t addr, uint8_t val){
+void SerialPort::write(uint16_t addr, uint8_t val){
     switch(addr) {
         case 0xFF01: 
             serial[0] = val;
@@ -24,9 +23,8 @@ void SerialPort::ext_write(uint16_t addr, uint8_t val){
 }
 
 SerialPort::SerialPort(MMU& mmu)
-    :region {this, START, END} 
     {
-        mmu.add_region(&region);
+        mmu.map_io_region(START, END, this);
         
         serial[0] = 0x00;
         serial[1] = 0x7E;

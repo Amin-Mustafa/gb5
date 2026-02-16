@@ -8,7 +8,7 @@
 #include "IO.h"
 #include "Spaces.h"
 
-class MemoryRegion;
+class Bus;
 
 class MMU {
 private:   
@@ -20,7 +20,8 @@ public:
     ~MMU();
     void map_region(uint16_t start, uint16_t end, uint8_t* data);
     void unmap_region(uint16_t start, uint16_t end);
-    void map_io(uint8_t reg_addr_low, IO* io_reg);
+    void map_io_region(uint16_t start, uint16_t end, IO* io_reg);
+    void map_io_register(uint16_t addr, IO* io_reg);
     uint8_t read(uint16_t addr);
     void write(uint16_t addr, uint8_t val);
 };

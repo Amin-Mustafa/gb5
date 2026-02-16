@@ -1,13 +1,13 @@
-#include "../../include/Graphics/PPURegs.h" 
-#include "../../include/Memory/MMU.h" 
-#include "../../include/Memory/Spaces.h"
+#include "Graphics/PPURegs.h" 
+#include "Memory/MMU.h" 
+#include "Memory/Spaces.h"
+#include "Memory/Bus.h"
 
 
-PPURegs::PPURegs(MMU& mmu) 
-//read/write via MMU
-    :region{this, START, END}
+PPURegs::PPURegs(Bus& bus, MMU& mmu) 
+    :bus{bus}
     {
-        mmu.add_region(&region);
+        mmu.map_io_region(START, END, this);
         //defaults
         lcdc    = 0x91;
         stat    = 0x85;
@@ -24,7 +24,7 @@ PPURegs::PPURegs(MMU& mmu)
 
     }
 
-uint8_t PPURegs::ext_read(uint16_t addr) {
+uint8_t PPURegs::read(uint16_t addr) {
     switch(addr) {
         case Space::LCDC: return lcdc;
         case Space::STAT: return stat;
@@ -41,7 +41,7 @@ uint8_t PPURegs::ext_read(uint16_t addr) {
         default: return 0xFF;
     }
 }
-void PPURegs::ext_write(uint16_t addr, uint8_t val) {
+void PPURegs::write(uint16_t addr, uint8_t val) {
     switch(addr) {
         case Space::LCDC: lcdc  = val;  break;
         case Space::STAT: stat = ((val & ~0x03) | (stat & 0x03)); break;
@@ -49,7 +49,10 @@ void PPURegs::ext_write(uint16_t addr, uint8_t val) {
         case Space::SCX : scx   = val;  break;
         case Space::LY  : break; //read only
         case Space::LYC : lyc   = val;  break;
-        case Space::DMA : dma = val; break;
+        case Space::DMA :
+            dma = val;
+            bus.start_dma(val);
+            break;
         case Space::BGP : bgp   = val;  break;
         case Space::OBP0: obp_0 = val;  break;
         case Space::OBP1: obp_1 = val;  break;

@@ -9,6 +9,7 @@ class CPU;
 class PPU;
 class JoyPad;
 class Timer;
+class OAM;
 
 class Bus {
 private:
@@ -35,6 +36,7 @@ public:
     unsigned long get_cycles() const {return cycles;}
 
     //dma functions
+    OAM* oam_dma_dest;
     void start_dma(uint8_t page);
     bool dma_active() const {return dmac.active();}
 };

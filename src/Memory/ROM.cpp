@@ -5,7 +5,6 @@
 #include "Memory/Spaces.h"
 
 ROM::ROM(MMU& mmu)
-	:container(0x8000)
 	 {
 		mmu.map_region(Space::ROM::START, Space::ROM::END, container.data());
 	 }

@@ -59,9 +59,6 @@ public:
     void get_tile_line();
     void push_to_fifo();
 
-    //dbg stuff
-    void print_state();
-
 private:
     StateFunction curr_state;
 };

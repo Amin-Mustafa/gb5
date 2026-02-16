@@ -3,12 +3,11 @@
 
 #include <cstdint>
 #include <array>
-#include "MappedRegister.h"
+#include "Memory/IO.h"
 
 class MMU;
 class Instruction;
 class CPU;
-
 
 enum class Interrupt : uint8_t {
     VBLANK = 0, LCD, TIMER, SERIAL, JOYPAD
@@ -25,6 +24,9 @@ public:
         Interrupt::SERIAL,
         Interrupt::JOYPAD
     };
+
+    static constexpr uint16_t IF = 0xFF0F;
+    static constexpr uint16_t IE = 0xFFFF;
     
 public:
     InterruptController(MMU& mem);

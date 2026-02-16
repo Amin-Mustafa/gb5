@@ -1,7 +1,7 @@
-#include "../../include/Graphics/SpriteFetcher.h"
-#include "../../include/Graphics/VRAM.h"   
-#include "../../include/Graphics/PPURegs.h"   
-#include "../../include/Memory/Spaces.h"   
+#include "Graphics/SpriteFetcher.h"
+#include "Graphics/VRAM.h"   
+#include "Graphics/PPURegs.h"   
+#include "Memory/Spaces.h"   
 #include <iostream>
 #include <format>
 
@@ -13,8 +13,6 @@ constexpr int SCREEN_Y_OFFSET = 16;
 constexpr int SCREEN_X_OFFSET = 8;
 constexpr int BASE_SPR_HEIGHT = 8;
 
-std::string sprite_info(const Sprite& spr);
-std::string spr_fetcher_state_to_str(int cycles);
 bool px_occupied(SprFifo& fifo, SpritePixel candidate);
 
 void SpriteFetcher::start() {
@@ -126,45 +124,6 @@ void SpriteFetcher::push_to_fifo() {
         stop();
     } else {
         reset_fetch();
-    }
-}
-
-void SpriteFetcher::print_state() {
-    std::cout << "Fetch state: ";
-    if(!on) {
-        std::cout << "INACTIVE";
-    } else {
-        std::cout << spr_fetcher_state_to_str(cycles);
-    }
-    std::cout << std::endl;
-
-    //print the pixel queue
-    std::cout << "Pixel buffer: ";
-    for(const auto& n : px_buf) {
-        std::cout << (int)n << ' ';
-    }
-    std::cout << "\t(cycle " << (int)cycles << ")";
-    std::cout << std::endl;
-}
-
-std::string sprite_info(const Sprite& spr) {
-    return std::format(
-            "X:{:d}, Y:{:d}, INDEX:{:02x}", 
-            spr.x(), 
-            spr.y(),
-            spr.index() 
-        );
-}
-
-std::string spr_fetcher_state_to_str(int cycles) {
-    if(cycles <= GET_ID_START) {
-        return "GET ID";
-    } else if(cycles <= GET_ROW_START) {
-        return "GET ROW";
-    } else if(cycles <= GET_LINE_START) {
-        return "GET LINE";
-    } else { 
-        return "PUSH";
     }
 }
 

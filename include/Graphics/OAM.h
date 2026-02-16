@@ -10,10 +10,11 @@ class MMU;
 
 class OAM {
 private:
-    std::array<uint8_t, 0xA0> container;
+    std::array<uint8_t, 0x100> container;
+    bool accessible = true;
 public:
     static constexpr uint16_t START = 0xFE00;
-    static constexpr uint16_t END   = 0xFE9F;
+    static constexpr uint16_t END   = 0xFEFF; //padded to fill page
 
     OAM(MMU& mmu) {
         mmu.map_region(START, END, container.data());
@@ -26,6 +27,20 @@ public:
     }
     Sprite sprite_at(uint16_t addr) {
         return Sprite{&container[addr - START]};
+    }
+
+    void block(MMU& mmu) {
+        if(accessible) {
+            accessible = false;
+            mmu.unmap_region(START, END);
+        }
+    }
+    
+    void unblock(MMU& mmu) {
+        if(!accessible) {
+            mmu.map_region(START, END, container.data());
+            accessible = true;
+        }
     }
 };  
 

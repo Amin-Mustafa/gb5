@@ -3,21 +3,22 @@
 
 #include <cstdint>
 #include <array>
-#include "../../include/Memory/MemoryRegion.h"
+#include "Memory/IO.h"
 
 class MMU;
+class Bus;
 
-class PPURegs {
+class PPURegs : public IO {
 private:
-    MemoryRegion region;    //external memory mapping
     static constexpr uint16_t START = 0xFF40;
     static constexpr uint16_t END   = 0xFF4B;
+    Bus& bus;
 public:
-    PPURegs(MMU& mmu);
+    PPURegs(Bus& bus, MMU& mmu);
     uint8_t lcdc, stat, scy, scx, ly, lyc, dma, bgp, obp_0, obp_1, wy, wx;
 
-    uint8_t ext_read(uint16_t addr);
-    void ext_write(uint16_t addr, uint8_t val);
+    uint8_t read(uint16_t addr) override;
+    void write(uint16_t addr, uint8_t val) override;
 };  
 
 //LCDC bit checks

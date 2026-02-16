@@ -2,14 +2,14 @@
 #define TIMER_H
 
 #include <cstdint>
-#include "Memory/MemoryRegion.h"
 #include "EdgeDetector.h"
+#include "Memory/IO.h"
 
 class MMU;
 class InterruptController;
 class Bus;
 
-class Timer {
+class Timer : public IO {
 private:
     uint16_t div;
     uint8_t counter;
@@ -19,7 +19,6 @@ private:
     unsigned long cycles;
     EdgeDetector increment_trigger;
 
-    MemoryRegion region;
     InterruptController& ic;
 
 public:
@@ -29,8 +28,8 @@ public:
     Timer(Bus& bus, MMU& mmu, InterruptController& int_controller);
     void tick();
 
-    uint8_t ext_read(uint16_t addr);
-    void ext_write(uint16_t addr, uint8_t val);
+    uint8_t read(uint16_t addr) override;
+    void write(uint16_t addr, uint8_t val) override;
 
     unsigned long frequency() const;
     bool enabled() const {
