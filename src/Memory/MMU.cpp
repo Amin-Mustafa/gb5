@@ -4,6 +4,13 @@
 #include <stdexcept>
 #include <iostream>
 
+inline bool between(uint16_t num, uint16_t lo, uint16_t hi) {
+    return (num >= lo) && (num <= hi);
+}
+bool reserved_address(uint16_t addr) {
+    return between(addr, Space::OAM_RESERVED_START, Space::OAM_RESERVED_END);
+}
+
 MMU::MMU(Bus& bus)  
     {
         bus.connect(*this);
@@ -42,6 +49,9 @@ void MMU::map_io_region(uint16_t start, uint16_t end, IO* io_reg) {
 }
 
 uint8_t MMU::read(uint16_t addr) {
+    if(reserved_address(addr)) {
+        return 0xFF;
+    }
     //normal memory
     if(addr < 0xFF00) {
         uint8_t* data = pages[addr >> 8];
@@ -61,11 +71,15 @@ uint8_t MMU::read(uint16_t addr) {
     if(io_handler) {
         return io_handler->read(addr);
     } else {
-        return 0xFF;
+        return 0xFF;    //unimplemented memory
     }
 }
 
 void MMU::write(uint16_t addr, uint8_t val) {
+    if(reserved_address(addr)) {
+        return;
+    }
+
     if(addr < 0x8000) {
         return; //TODO MBC
     }

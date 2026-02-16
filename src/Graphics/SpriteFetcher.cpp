@@ -63,16 +63,24 @@ void SpriteFetcher::get_row() {
     if(cycles == GET_ROW_START) {
         uint8_t spr_height = BASE_SPR_HEIGHT + BASE_SPR_HEIGHT*(uint8_t)obj_size(regs);
         
-        //the tile row is fixed here 
+        // 1. Calculate row within the full sprite (e.g., 0-15 for 8x16)
         row = regs.ly - spr_queue.front().y() + SCREEN_Y_OFFSET;
         if(spr_queue.front().y_flip()) {
             row = (spr_height-1) - row;  
         }
 
-        //double height objects cause lower bit of tile index to be ignored
-        if(spr_height == 2*BASE_SPR_HEIGHT) {
-            tile_index &= 0xFE;
+        // 2. Adjust Tile Index and Row for 8x16 mode
+        if(spr_height == 16) {
+            // Mask to top tile initially
+            tile_index &= 0xFE; 
+            
+            // If we are in the bottom half of the sprite
+            if(row >= 8) {
+                tile_index |= 0x01; // Use the next tile
+                row -= 8;           // Normalize row to 0-7
+            }
         }
+        // For 8x8, row is already 0-7 and index is correct
     }
     //the tile data block is fixed. No need to do anything in second dot
     if(cycles == GET_LINE_START - 1) {

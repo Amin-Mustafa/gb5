@@ -20,7 +20,7 @@ private:
     uint8_t x_pos, y_pos;           //current pos wrt tilemap origin
     Tile tile_data;                 //current tile data
     uint8_t tile_index;             //index of current tile 
-    uint8_t cycles;
+    uint8_t cycles = 0;
 
     bool stop_pending;
     bool on;

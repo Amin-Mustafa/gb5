@@ -29,10 +29,19 @@ namespace Space {
 
     enum OAM : uint16_t {
         OAM_START = 0xFE00, OAM_END = 0xFE9F,
+        OAM_RESERVED_START = 0xFEA0, OAM_RESERVED_END = 0xFEFF,
     };
 
     enum VRAM : uint16_t {
         VRAM_START = 0x8000, VRAM_END = 0x9FFF,
+    };
+
+    enum EchoRAM : uint16_t {
+        ECHO_RAM_START = 0xE000, ECHO_RAM_END = 0xFDFF,
+    };
+
+    enum WaveRAM : uint16_t {
+        WAVE_RAM_START = 0xFF30, WAVE_RAM_END = 0xFF3F,
     };
 }
 

@@ -28,7 +28,7 @@ private:
     
     //FSM behavior
     bool on = false;    //the spr fifo only works periodically
-    int cycles;
+    int cycles = 0;
 public: 
     SpriteFetcher(const VRAM& vram, const PPURegs& control, SprFifo& sprite_fifo)
         : vram{vram},

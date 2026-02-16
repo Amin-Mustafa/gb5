@@ -54,6 +54,7 @@ public:
     {
         mmu.map_region(0xA000, 0xBFFF, ext_ram.data());
         mmu.map_region(0xC000, 0xDFFF, wram.data());
+        mmu.map_region(0xE000, 0xFDFF, wram.data());    //echo ram
 
         ppu.connect_display(&display);
         jp.connect_input_handler(&ih);

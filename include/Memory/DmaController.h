@@ -8,8 +8,8 @@ constexpr unsigned int DMA_CYCLES = 160;
 
 class DmaController {
 private:
-    uint16_t cycles; 
-    bool on;
+    uint16_t cycles = 0; 
+    bool on = false;
     uint16_t start_addr;
 public:
 
