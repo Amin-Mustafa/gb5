@@ -33,10 +33,10 @@ public:
         uint16_t addr = START;
         switch(addr_mode) {
             case AddressMode::UNSIGNED:
-                addr = Space::BLOCK_0 + index*0x10;
+                addr = Space::TILEBLOCK_0 + index*0x10;
                 break;
             case AddressMode::SIGNED:
-                addr = Space::BLOCK_2 + static_cast<int8_t>(index)*0x10;
+                addr = Space::TILEBLOCK_2 + static_cast<int8_t>(index)*0x10;
                 break;
         }
         return Tile{ &data[addr - START] };

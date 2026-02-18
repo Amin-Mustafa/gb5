@@ -53,9 +53,6 @@ public:
     void start();
     void request_stop();    
 
-    //dbg stuff
-    void print_state();
-
     //getters/setters
     bool active() const {return on;}
 

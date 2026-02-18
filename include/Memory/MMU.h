@@ -1,7 +1,6 @@
 #ifndef MMU_H
 #define MMU_H
 
-#include <vector>
 #include <cstdint>
 #include <memory>
 #include <array>
@@ -9,12 +8,17 @@
 #include "Spaces.h"
 
 class Bus;
+class MBC;
 
 class MMU {
 private:   
     std::array<uint8_t*, 0x100> pages;
     std::array<IO*, 0x100> io_registers;
     std::array<uint8_t, 127> hram;
+
+    std::array<uint8_t, 0x10000> fallback;
+
+    MBC* mbc;
 public:
     MMU(Bus& bus);
     ~MMU();
@@ -22,6 +26,9 @@ public:
     void unmap_region(uint16_t start, uint16_t end);
     void map_io_region(uint16_t start, uint16_t end, IO* io_reg);
     void map_io_register(uint16_t addr, IO* io_reg);
+
+    void connect_MBC(MBC* Mbc) {mbc = Mbc;}
+
     uint8_t read(uint16_t addr);
     void write(uint16_t addr, uint8_t val);
 };

@@ -10,13 +10,21 @@ namespace Space {
     };
 
     enum TileBlock: uint16_t {
-        BLOCK_0 = 0x8000,
-        BLOCK_1 = 0x8800,
-        BLOCK_2 = 0x9000
+        TILEBLOCK_0 = 0x8000,
+        TILEBLOCK_1 = 0x8800,
+        TILEBLOCK_2 = 0x9000,
     };
 
     enum ROM : uint16_t {
-        START = 0x0000, END = 0x7FFF
+        ROM_START = 0x0000, ROM_END = 0x7FFF,
+        ROM_BANK1_START = 0x0000, ROM_BANK1_END = 0x3FFF,
+        ROM_BANK2_START = 0x4000, ROM_BANK2_END = 0x7FFF
+    };
+
+    enum RAM : uint16_t {
+        EXTRAM_START = 0xA000, EXTRAM_END = 0xBFFF,
+        WRAM_START = 0xC000, WRAM_END = 0xDFFF,
+        ECHO_RAM_START = 0xE000, ECHO_RAM_END = 0xFDFF,
     };
 
     enum PPU_Register: uint16_t {
@@ -34,10 +42,6 @@ namespace Space {
 
     enum VRAM : uint16_t {
         VRAM_START = 0x8000, VRAM_END = 0x9FFF,
-    };
-
-    enum EchoRAM : uint16_t {
-        ECHO_RAM_START = 0xE000, ECHO_RAM_END = 0xFDFF,
     };
 
     enum WaveRAM : uint16_t {

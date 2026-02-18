@@ -58,6 +58,12 @@ public:
         num_elements = 0;
     }
 
+    void discard(uint8_t number) {
+        for(int i = 0; i < number; ++i) {
+            if(!empty()) pop();
+        }
+    }
+
     //dbg stuff
     void print() {
         for(const auto& d : data) {

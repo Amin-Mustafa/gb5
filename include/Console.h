@@ -3,9 +3,10 @@
 
 #include "Memory/MMU.h"
 #include "Memory/InterruptController.h"
-#include "Memory/ROM.h"
+#include "Memory/Cart.h"
 #include "Memory/Bus.h"
 #include "Memory/SerialPort.h"
+#include "Memory/Spaces.h"
 #include "Graphics/PPU.h"
 #include "Graphics/LCD.h"
 #include "Control/Joypad.h"
@@ -21,11 +22,10 @@ public:
     InterruptController ic;
 
     //memory
-    std::array<uint8_t, 0x2000> ext_ram;
     std::array<uint8_t, 0x2000> wram;
 
     //components
-    ROM rom;
+    Cart rom;
     CPU cpu;
     PPU ppu;
     JoyPad jp;
@@ -39,8 +39,7 @@ public:
     :bus{}, 
      mmu{bus},    
      ic{mmu},     
-          
-     ext_ram{},     
+           
      wram{},
 
      rom{mmu},
@@ -52,9 +51,8 @@ public:
      ih{},
      display{3}
     {
-        mmu.map_region(0xA000, 0xBFFF, ext_ram.data());
-        mmu.map_region(0xC000, 0xDFFF, wram.data());
-        mmu.map_region(0xE000, 0xFDFF, wram.data());    //echo ram
+        mmu.map_region(Space::WRAM_START, Space::WRAM_END, wram.data());
+        mmu.map_region(Space::ECHO_RAM_START, Space::ECHO_RAM_END, wram.data());    //echo ram
 
         ppu.connect_display(&display);
         jp.connect_input_handler(&ih);

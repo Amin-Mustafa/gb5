@@ -1,6 +1,7 @@
 #include "Memory/MMU.h"
 #include "Memory/Bus.h"
 #include "Memory/IO.h"
+#include "MBC/MBC.h"
 #include <stdexcept>
 #include <iostream>
 
@@ -71,7 +72,8 @@ uint8_t MMU::read(uint16_t addr) {
     if(io_handler) {
         return io_handler->read(addr);
     } else {
-        return 0xFF;    //unimplemented memory
+        //return 0xFF;    //unimplemented memory
+        return fallback[addr];
     }
 }
 
@@ -81,7 +83,8 @@ void MMU::write(uint16_t addr, uint8_t val) {
     }
 
     if(addr < 0x8000) {
-        return; //TODO MBC
+        if(mbc) mbc->write(addr, val);
+        return;
     }
     if(addr < 0xFF00) {
         uint8_t* data = pages[addr >> 8];
@@ -99,5 +102,7 @@ void MMU::write(uint16_t addr, uint8_t val) {
     IO* handler = io_registers[addr & 0xFF];
     if(handler) {
         handler->write(addr, val);
+    } else {
+        fallback[addr] = val;
     }
 }

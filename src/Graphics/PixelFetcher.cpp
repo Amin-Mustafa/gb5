@@ -110,14 +110,13 @@ void PixelFetcher::get_tile_line() {
 }
 
 void PixelFetcher::push_to_fifo(){
-    if(fifo.empty()) {
+    if(fifo.count() <= 8) { 
         for(size_t px = 0; px < px_buf.size(); ++px) {
             fifo.push(px_buf[px]);
         }
-        //push successful
-        //advance to next tile
-        x_pos++;
-        reset_fetch();          //...go back to start
+        //push successful; advance to next tile
+        x_pos = (x_pos + 1) & 0x1F;
+        reset_fetch();
     }
 
     //otherwise, not yet empty; dont push
